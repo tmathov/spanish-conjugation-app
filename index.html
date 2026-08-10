@@ -864,53 +864,27 @@ function structLabel(id){
 const HOW_TO_HTML = {
   en: `
     <h3>The basics</h3>
-    <p>Every time you load the page, you'll see a pronoun and a verb (or a partial phrase like "no + infinitive"). Type the correct conjugated form and press <b>Enter</b> (or click <b>Check</b>).</p>
+    <p>Type the correct conjugated form and press <b>Enter</b> (or click <b>Check</b>). In multiple choice, click an option or press <b>1</b>–<b>4</b>.</p>
     <ul>
       <li><b class="color-ok">Green</b>: correct</li>
       <li><b class="color-almost">Yellow</b>: correct, but missing an accent mark.</li>
       <li><b class="color-bad">Red</b>: incorrect (the right answer is shown)</li>
     </ul>
-    <p>Click <b>← Previous</b> / <b>Next →</b> to move between questions, or use the <b>← →</b> arrow keys. They won't interfere while you're typing.</p>
-    <h3>The "Eng." button</h3>
-    <p>Not sure what a verb means? Click the small <b>Eng.</b> pill next to the infinitive to see its English translation. It's off by default so it doesn't give anything away before you try.</p>
-    <h3>Multiple choice mode</h3>
-    <p>If you're in <b>multiple choice</b> mode instead of typing, just click an option, or press <b>1</b>, <b>2</b>, <b>3</b>, or <b>4</b> on your keyboard. Press <b>Enter</b> to move to the next question once you've answered.</p>
-    <h3>Filters (tap "Filters" to open)</h3>
-    <p>This is where you control what you practice. Everything works together, so you can mix and match:</p>
-    <ul>
-      <li><b>Manual mode</b>: want to drill specific verbs? Type them in (comma-separated). Turn on "only these verbs" if you want just those. Leave it off and they'll show up more often, mixed in with everything else.</li>
-      <li><b>Variety</b>: choose between standard Latin American Spanish (tú/ustedes), Rioplatense (vos), or Spain (vosotros).</li>
-      <li><b>Vocabulary</b>: basic, intermediate, or advanced (each level includes the ones below it).</li>
-      <li><b>Drill modes</b>: "type the form" or "multiple choice."</li>
-      <li><b>Verb type</b>: regular, irregular, or both.</li>
-      <li><b>Verb tenses</b>: organized by Indicative / Subjunctive / Imperative. Tap the little ☑ next to a mood's name to select (or deselect) every tense in that group at once. Click the "i" next to any tense to see a full example conjugation.</li>
-      <li><b>Special forms</b>: "ir + a + infinitive" (near future), "estar + gerund" (progressive), and "gustar"-type verbs (gustar, doler, importar, etc.), plus a toggle for reflexive/pronominal verbs. Turn on "only these forms" to drill just whatever's checked here.</li>
-    </ul>
+    <p>Use <b>← →</b> to move between questions. Click <b>Eng.</b> next to a verb for its translation.</p>
+    <h3>Filters</h3>
+    <p>Tap "Filters" to customize practice by verb type, tense, vocabulary level, regional variety (tú/vos/vosotros), and special forms ("ir + a", "estar + gerund", "gustar"-type verbs). Click the "i" next to any tense for a full example, or the ☑ to select a whole group at once.</p>
   `,
   es: `
     <h3>Lo básico</h3>
-    <p>Cada vez que cargas la página vas a ver un pronombre y un verbo (o una frase parcial como "no + infinitivo"). Escribe la forma conjugada correcta y presiona <b>Enter</b> (o haz clic en <b>Comprobar</b>).</p>
+    <p>Escribe la forma conjugada correcta y presiona <b>Enter</b> (o haz clic en <b>Comprobar</b>). En opción múltiple, haz clic en una opción o presiona <b>1</b>–<b>4</b>.</p>
     <ul>
       <li><b class="color-ok">Verde</b>: correcta</li>
       <li><b class="color-almost">Amarillo</b>: correcta, pero le falta una tilde.</li>
       <li><b class="color-bad">Rojo</b>: incorrecta (se muestra la respuesta correcta)</li>
     </ul>
-    <p>Haz clic en <b>← Anterior</b> / <b>Siguiente →</b> para moverte entre preguntas, o usa las flechas <b>← →</b> del teclado. No interfieren mientras estás escribiendo.</p>
-    <h3>El botón "Eng."</h3>
-    <p>¿No sabes qué significa un verbo? Haz clic en la píldora <b>Eng.</b> al lado del infinitivo para ver su traducción al inglés. Está apagada por defecto para no arruinarte el intento.</p>
-    <h3>Modo opción múltiple</h3>
-    <p>Si estás en modo <b>opción múltiple</b> en vez de escribir, haz clic en una opción, o presiona <b>1</b>, <b>2</b>, <b>3</b> o <b>4</b> en el teclado. Presiona <b>Enter</b> para pasar a la siguiente pregunta una vez que respondiste.</p>
-    <h3>Filtros (toca "Filtros" para abrir)</h3>
-    <p>Aquí controlas qué practicas. Todo funciona junto, así que puedes combinar:</p>
-    <ul>
-      <li><b>Modo manual</b>: ¿quieres practicar verbos específicos? Escríbelos (separados por coma). Activa "solo estos verbos" si quieres solo esos. Déjalo apagado y van a aparecer más seguido, mezclados con el resto.</li>
-      <li><b>Variedad</b>: elige entre español estándar latinoamericano (tú/ustedes), rioplatense (vos), o de España (vosotros).</li>
-      <li><b>Vocabulario</b>: básico, intermedio o avanzado (cada nivel incluye los de abajo).</li>
-      <li><b>Modos de drilling</b>: "escribir la forma" u "opción múltiple".</li>
-      <li><b>Tipo de verbo</b>: regular, irregular, o ambos.</li>
-      <li><b>Tiempos verbales</b>: organizados en Indicativo / Subjuntivo / Imperativo. Toca el ☑ al lado del nombre de un modo para seleccionar (o deseleccionar) todos los tiempos de ese grupo de una vez. Haz clic en la "i" al lado de cualquier tiempo para ver un ejemplo completo de conjugación.</li>
-      <li><b>Formas especiales</b>: "ir + a + infinitivo" (futuro cercano), "estar + gerundio" (progresivo) y verbos tipo "gustar" (gustar, doler, importar, etc.), más un switch para verbos reflexivos/pronominales. Activa "solo estas formas" para practicar solo lo que esté marcado aquí.</li>
-    </ul>
+    <p>Usa <b>← →</b> para moverte entre preguntas. Haz clic en <b>Eng.</b> al lado de un verbo para ver su traducción.</p>
+    <h3>Filtros</h3>
+    <p>Toca "Filtros" para personalizar la práctica por tipo de verbo, tiempo, nivel de vocabulario, variedad regional (tú/vos/vosotros), y formas especiales ("ir + a", "estar + gerundio", verbos tipo "gustar"). Haz clic en la "i" al lado de cualquier tiempo para ver un ejemplo completo, o en el ☑ para seleccionar todo un grupo de una vez.</p>
   `,
 };
 let openInfoPop = null;
