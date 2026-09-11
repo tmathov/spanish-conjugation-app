@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Describe y adivina</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #FFFFFF;
+    color: #1A1A1A;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+  }
+  .wrap { width: 100%; max-width: 420px; padding: 0 20px 40px; }
+
+  /* Header */
+  .header { padding: 28px 0 16px; border-bottom: 1px solid #EDEDED; }
+  .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; gap: 12px; }
+  .title { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+  .header-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .count { font-size: 12px; color: #9B9B9B; }
+
+  .lang-switch { display: flex; align-items: center; gap: 6px; }
+  .lang-label { font-size: 11px; font-weight: 600; color: #8A8A8A; cursor: pointer; }
+  .lang-label.active { color: #1A1A1A; }
+  .switch { position: relative; width: 34px; height: 19px; flex-shrink: 0; cursor: pointer; display: inline-block; }
+  .switch-track { position: absolute; inset: 0; background: #E4E4E4; border-radius: 19px; transition: background 0.15s ease; }
+  .switch-track.checked { background: #1A1A1A; }
+  .switch-knob { position: absolute; width: 14px; height: 14px; left: 2.5px; top: 2.5px; background: #FFFFFF; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,0.25); transition: left 0.15s ease; }
+  .switch-knob.checked { left: 17.5px; }
+
+  .mode-row { display: flex; gap: 4px; }
+  .mode-btn {
+    flex: 1; padding: 9px 0; font-size: 13px; font-weight: 500; font-family: inherit;
+    border: none; border-bottom: 2px solid #EDEDED; background: none; color: #9B9B9B; cursor: pointer;
+  }
+  .mode-btn.active { border-bottom: 2px solid #1A1A1A; color: #1A1A1A; }
+
+  /* Help */
+  .help-toggle {
+    width: 100%; margin-top: 12px; padding: 8px 0; font-size: 12px; font-family: inherit;
+    background: none; border: none; color: #9B9B9B; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .help-toggle .chevron { display: inline-block; font-size: 10px; transition: transform 0.15s ease; }
+  .help-toggle .chevron.open { transform: rotate(180deg); }
+  .help-panel {
+    margin-top: 4px; margin-bottom: 8px; padding: 16px; background: #FAFAFA;
+    border: 1px solid #EDEDED; border-radius: 8px; font-size: 13px; line-height: 1.6; color: #4A4A4A;
+    display: none;
+  }
+  .help-panel.open { display: block; }
+  .help-panel p { margin: 0 0 10px; }
+  .help-panel p:last-child { margin-bottom: 0; }
+
+  /* Repaso flip card */
+  .card-outer { margin-top: 40px; margin-bottom: 32px; perspective: 1400px; cursor: pointer; }
+  .card-inner {
+    position: relative; min-height: 160px;
+    transition: transform 0.5s cubic-bezier(.45,.1,.15,1);
+    transform-style: preserve-3d;
+  }
+  .card-inner.flipped { transform: rotateY(180deg); }
+  .card-face {
+    position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+  }
+  .card-back { transform: rotateY(180deg); }
+  .word-row { display: inline-flex; align-items: center; gap: 8px; }
+  .word { font-size: 36px; font-weight: 500; letter-spacing: -0.01em; line-height: 1.25; word-break: break-word; }
+  .info-btn {
+    width: 20px; height: 20px; flex-shrink: 0; border-radius: 50%; border: 1px solid #C9C9C9;
+    background: #FFFFFF; color: #9B9B9B; font-size: 11px; font-style: italic; font-family: Georgia, serif;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
+    line-height: 1; align-self: flex-start; margin-top: 2px;
+  }
+  .info-btn.active { background: #F1ECFB; color: #6B4FC4; border-color: #B9A3EA; }
+  .card-sub { margin-top: 14px; min-height: 18px; }
+  .card-sub .cat-text { font-size: 12px; color: #9B9B9B; text-transform: lowercase; }
+  .card-sub .hint { font-size: 12px; color: #C9C9C9; }
+  .translation { font-size: 30px; font-weight: 500; letter-spacing: -0.01em; color: #7C5CBF; word-break: break-word; }
+  .empty-state { min-height: 160px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #9B9B9B; }
+
+  .primary-btn {
+    width: 100%; padding: 13px; font-size: 14px; font-weight: 500; font-family: inherit;
+    border: 1px solid #1A1A1A; border-radius: 6px; background: #1A1A1A; color: #FFFFFF; cursor: pointer;
+  }
+  .primary-btn:disabled { background: #F5F5F5; color: #B5B5B5; border-color: #EDEDED; cursor: default; }
+
+  /* Juego */
+  .duration-label { font-size: 12px; color: #9B9B9B; margin-bottom: 10px; }
+  .duration-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
+  .duration-btn {
+    flex: 1 1 auto; min-width: 80px; padding: 9px 0; font-size: 13px; font-family: inherit;
+    border: 1px solid #E5E5E5; border-radius: 6px; background: #FFFFFF; color: #9B9B9B; cursor: pointer;
+  }
+  .duration-btn.active { border: 1px solid #B9A3EA; background: #F1ECFB; color: #6B4FC4; }
+  .warn { margin-top: 10px; font-size: 12px; color: #B5533C; }
+
+  .game-topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; font-size: 12px; color: #9B9B9B; }
+  .game-topbar strong { color: #1A1A1A; }
+  .link-btn { background: none; border: none; color: #9B9B9B; font-size: 12px; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; padding: 0; font-family: inherit; }
+  .timer { font-variant-numeric: tabular-nums; }
+
+  .game-word-block { text-align: center; margin-bottom: 28px; }
+  .game-word-label { font-size: 12px; color: #9B9B9B; margin-bottom: 10px; }
+  .game-word { font-size: 34px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.2; word-break: break-word; text-transform: uppercase; margin-bottom: 10px; }
+  .game-word-meta { font-size: 12px; color: #C9C9C9; margin-bottom: 16px; }
+  .game-word-meta .cat-text { text-transform: lowercase; }
+  .game-explain { font-size: 14px; color: #6B6B6B; }
+
+  .game-actions { display: flex; flex-direction: column; gap: 8px; }
+  .btn-guessed { width: 100%; padding: 15px; font-size: 15px; font-weight: 600; font-family: inherit; border: 1px solid #1A1A1A; border-radius: 6px; background: #1A1A1A; color: #FFFFFF; cursor: pointer; }
+  .btn-guessed:disabled { background: #F5F5F5; color: #B5B5B5; cursor: default; }
+  .btn-pass { width: 100%; padding: 12px; font-size: 14px; font-weight: 500; font-family: inherit; border: 1px solid #E5E5E5; border-radius: 6px; background: #FFFFFF; color: #6B6B6B; cursor: pointer; }
+  .end-early { width: 100%; margin-top: 14px; padding: 8px 0; font-size: 12px; font-family: inherit; background: none; border: none; color: #C9C9C9; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+
+  .finished-block { margin-top: 40px; margin-bottom: 24px; text-align: center; }
+  .finished-label { font-size: 13px; color: #9B9B9B; margin-bottom: 18px; }
+  .finished-stats { display: flex; justify-content: center; gap: 32px; margin-bottom: 32px; }
+  .finished-stat-num { font-size: 28px; font-weight: 600; }
+  .finished-stat-label { font-size: 12px; color: #9B9B9B; }
+
+  /* Vocabulario / tipo de palabra */
+  .section { margin-top: 28px; }
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .section-label { font-size: 12px; color: #9B9B9B; }
+  .toggle-all { background: none; border: none; color: #1A1A1A; font-size: 12px; font-family: inherit; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; padding: 0; }
+  .pill-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .level-btn { flex: 1; padding: 9px 0; font-size: 13px; font-family: inherit; border: 1px solid #E5E5E5; border-radius: 6px; background: #FFFFFF; color: #9B9B9B; cursor: pointer; }
+  .level-btn.active { border: 1px solid #B9A3EA; background: #F1ECFB; color: #6B4FC4; }
+  .type-btn { padding: 7px 12px; font-size: 13px; font-family: inherit; border: 1px solid #E5E5E5; border-radius: 6px; background: #FFFFFF; color: #9B9B9B; cursor: pointer; }
+  .type-btn.active { border: 1px solid #B9A3EA; background: #F1ECFB; color: #6B4FC4; }
+
+  /* Categorías desplegable */
+  .filters-toggle {
+    width: 100%; margin-top: 10px; padding: 12px 0; font-size: 13px; font-family: inherit;
+    background: none; border: none; color: #6B6B6B; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .filters-toggle .chevron { display: inline-block; font-size: 10px; transition: transform 0.15s ease; }
+  .filters-toggle .chevron.open { transform: rotate(180deg); }
+  .filters-panel { margin-top: 8px; border-top: 1px solid #EDEDED; padding-top: 20px; display: none; }
+  .filters-panel.open { display: block; }
+  .cat-list { display: flex; flex-direction: column; }
+  .cat-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; font-size: 14px; color: #9B9B9B; cursor: pointer; border-bottom: 1px solid #F5F5F5; }
+  .cat-item.active { color: #1A1A1A; }
+  .cat-item .box { width: 14px; height: 14px; flex-shrink: 0; border-radius: 3px; border: 1px solid #D5D5D5; display: flex; align-items: center; justify-content: center; }
+  .cat-item.active .box { border: 1px solid #B9A3EA; background: #F1ECFB; }
+  .cat-item .box .check { font-size: 10px; color: #6B4FC4; line-height: 1; display: none; }
+  .cat-item.active .box .check { display: inline; }
+  .cat-item .cat-label { text-transform: lowercase; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div class="header-top">
+      <span class="title" id="appTitle"></span>
+      <div class="header-right">
+        <span class="count" id="poolCount"></span>
+        <div class="lang-switch">
+          <span class="lang-label" id="langEn">EN</span>
+          <span class="switch" id="langSwitchBtn">
+            <span class="switch-track" id="switchTrack"></span>
+            <span class="switch-knob" id="switchKnob"></span>
+          </span>
+          <span class="lang-label" id="langEs">SP</span>
+        </div>
+      </div>
+    </div>
+    <div class="mode-row">
+      <button class="mode-btn" id="modeGameBtn"></button>
+      <button class="mode-btn" id="modeReviewBtn"></button>
+    </div>
+  </div>
+
+  <button class="help-toggle" id="helpToggle">
+    <span id="helpToggleLabel"></span>
+    <span class="chevron" id="helpChevron">&#9662;</span>
+  </button>
+  <div class="help-panel" id="helpPanel">
+    <p><strong id="helpGameLabel"></strong><span id="helpP2rest"></span></p>
+    <p><strong id="helpReviewLabel"></strong><span id="helpP3rest"></span></p>
+    <p id="helpP4"></p>
+  </div>
+
+  <div id="modeArea"></div>
+
+  <div class="section">
+    <div class="section-label" id="vocabLabel"></div>
+    <div class="pill-row" id="levelRow"></div>
+    <div class="warn" id="levelWarn" style="display:none;"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <span class="section-label" id="typeLabel"></span>
+      <button class="toggle-all" id="toggleAllTypes"></button>
+    </div>
+    <div class="pill-row" id="typeRow"></div>
+    <div class="warn" id="typeWarn" style="display:none;"></div>
+  </div>
+
+  <button class="filters-toggle" id="filtersToggle">
+    <span id="filtersToggleLabel"></span>
+    <span class="chevron" id="filtersChevron">&#9662;</span>
+  </button>
+  <div class="filters-panel" id="filtersPanel">
+    <div class="section-header" style="margin-bottom:14px;">
+      <span class="section-label" id="catSectionLabel"></span>
+      <button class="toggle-all" id="toggleAllCats"></button>
+    </div>
+    <div class="cat-list" id="catList"></div>
+    <div class="warn" id="catWarn" style="display:none;"></div>
+  </div>
+
+</div>
+
+<script>
+const VOCAB = [{"word": "ser", "category": "Verbos", "level": 1, "translation": "to be", "type": "Verbo"}, {"word": "estar", "category": "Verbos", "level": 1, "translation": "to be", "type": "Verbo"}, {"word": "ir", "category": "Verbos", "level": 1, "translation": "to go", "type": "Verbo"}, {"word": "hacer", "category": "Verbos", "level": 1, "translation": "to do/make", "type": "Verbo"}, {"word": "tener", "category": "Verbos", "level": 1, "translation": "to have", "type": "Verbo"}, {"word": "poder", "category": "Verbos", "level": 1, "translation": "to be able to/can", "type": "Verbo"}, {"word": "querer", "category": "Verbos", "level": 1, "translation": "to want/love", "type": "Verbo"}, {"word": "decir", "category": "Verbos", "level": 1, "translation": "to say/tell", "type": "Verbo"}, {"word": "ver", "category": "Verbos", "level": 1, "translation": "to see", "type": "Verbo"}, {"word": "dar", "category": "Verbos", "level": 1, "translation": "to give", "type": "Verbo"}, {"word": "poner", "category": "Verbos", "level": 1, "translation": "to put", "type": "Verbo"}, {"word": "saber", "category": "Verbos", "level": 1, "translation": "to know", "type": "Verbo"}, {"word": "gustar", "category": "Verbos", "level": 1, "translation": "to like", "type": "Verbo"}, {"word": "llamarse", "category": "Verbos", "level": 1, "translation": "to be named", "type": "Verbo"}, {"word": "hablar", "category": "Verbos", "level": 1, "translation": "to speak", "type": "Verbo"}, {"word": "comer", "category": "Verbos", "level": 1, "translation": "to eat", "type": "Verbo"}, {"word": "vivir", "category": "Verbos", "level": 1, "translation": "to live", "type": "Verbo"}, {"word": "trabajar", "category": "Verbos", "level": 1, "translation": "to work", "type": "Verbo"}, {"word": "comprar", "category": "Verbos", "level": 1, "translation": "to buy", "type": "Verbo"}, {"word": "salir", "category": "Verbos", "level": 1, "translation": "to go out/leave", "type": "Verbo"}, {"word": "entrar", "category": "Verbos", "level": 1, "translation": "to enter", "type": "Verbo"}, {"word": "volver", "category": "Verbos", "level": 1, "translation": "to return", "type": "Verbo"}, {"word": "venir", "category": "Verbos", "level": 1, "translation": "to come", "type": "Verbo"}, {"word": "llegar", "category": "Verbos", "level": 1, "translation": "to arrive", "type": "Verbo"}, {"word": "encontrar", "category": "Verbos", "level": 1, "translation": "to find", "type": "Verbo"}, {"word": "empezar", "category": "Verbos", "level": 1, "translation": "to start", "type": "Verbo"}, {"word": "terminar", "category": "Verbos", "level": 1, "translation": "to finish", "type": "Verbo"}, {"word": "conocer", "category": "Verbos", "level": 1, "translation": "to know/meet", "type": "Verbo"}, {"word": "ayudar", "category": "Verbos", "level": 1, "translation": "to help", "type": "Verbo"}, {"word": "cambiar", "category": "Verbos", "level": 1, "translation": "to change", "type": "Verbo"}, {"word": "seguir", "category": "Verbos", "level": 1, "translation": "to follow/continue", "type": "Verbo"}, {"word": "dejar", "category": "Verbos", "level": 1, "translation": "to leave/let", "type": "Verbo"}, {"word": "parar", "category": "Verbos", "level": 1, "translation": "to stop", "type": "Verbo"}, {"word": "recordar", "category": "Verbos", "level": 1, "translation": "to remember", "type": "Verbo"}, {"word": "olvidar", "category": "Verbos", "level": 1, "translation": "to forget", "type": "Verbo"}, {"word": "romperse", "category": "Verbos", "level": 1, "translation": "to break", "type": "Verbo"}, {"word": "esperar", "category": "Verbos", "level": 1, "translation": "to wait/hope", "type": "Verbo"}, {"word": "decidir", "category": "Verbos", "level": 1, "translation": "to decide", "type": "Verbo"}, {"word": "aceptar", "category": "Verbos", "level": 1, "translation": "to accept", "type": "Verbo"}, {"word": "cocinar", "category": "Verbos", "level": 1, "translation": "to cook", "type": "Verbo"}, {"word": "lavar", "category": "Verbos", "level": 1, "translation": "to wash", "type": "Verbo"}, {"word": "descansar", "category": "Verbos", "level": 1, "translation": "to rest", "type": "Verbo"}, {"word": "caerse", "category": "Verbos", "level": 1, "translation": "to fall", "type": "Verbo"}, {"word": "llevar", "category": "Verbos", "level": 1, "translation": "to carry/wear", "type": "Verbo"}, {"word": "nacer", "category": "Verbos", "level": 1, "translation": "to be born", "type": "Verbo"}, {"word": "compartir", "category": "Verbos", "level": 1, "translation": "to share", "type": "Verbo"}, {"word": "cantar", "category": "Verbos", "level": 1, "translation": "to sing", "type": "Verbo"}, {"word": "pintar", "category": "Verbos", "level": 1, "translation": "to paint", "type": "Verbo"}, {"word": "dibujar", "category": "Verbos", "level": 1, "translation": "to draw", "type": "Verbo"}, {"word": "despertarse", "category": "Verbos", "level": 1, "translation": "to wake up", "type": "Verbo"}, {"word": "levantarse", "category": "Verbos", "level": 1, "translation": "to get up", "type": "Verbo"}, {"word": "acostarse", "category": "Verbos", "level": 1, "translation": "to go to bed", "type": "Verbo"}, {"word": "crecer", "category": "Verbos", "level": 1, "translation": "to grow", "type": "Verbo"}, {"word": "pedir", "category": "Verbos", "level": 1, "translation": "to request/order", "type": "Verbo"}, {"word": "manejar", "category": "Verbos", "level": 1, "translation": "to drive", "type": "Verbo"}, {"word": "probar", "category": "Verbos", "level": 1, "translation": "to try/taste", "type": "Verbo"}, {"word": "servir", "category": "Verbos", "level": 1, "translation": "to serve", "type": "Verbo"}, {"word": "leer", "category": "Verbos", "level": 1, "translation": "to read", "type": "Verbo"}, {"word": "escribir", "category": "Verbos", "level": 1, "translation": "to write", "type": "Verbo"}, {"word": "escuchar", "category": "Verbos", "level": 1, "translation": "to listen", "type": "Verbo"}, {"word": "mirar", "category": "Verbos", "level": 1, "translation": "to look at", "type": "Verbo"}, {"word": "tomar", "category": "Verbos", "level": 1, "translation": "to take/drink", "type": "Verbo"}, {"word": "beber", "category": "Verbos", "level": 1, "translation": "to drink", "type": "Verbo"}, {"word": "abrir", "category": "Verbos", "level": 1, "translation": "to open", "type": "Verbo"}, {"word": "cerrar", "category": "Verbos", "level": 1, "translation": "to close", "type": "Verbo"}, {"word": "limpiar", "category": "Verbos", "level": 1, "translation": "to clean", "type": "Verbo"}, {"word": "viajar", "category": "Verbos", "level": 1, "translation": "to travel", "type": "Verbo"}, {"word": "estudiar", "category": "Verbos", "level": 1, "translation": "to study", "type": "Verbo"}, {"word": "aprender", "category": "Verbos", "level": 1, "translation": "to learn", "type": "Verbo"}, {"word": "jugar", "category": "Verbos", "level": 1, "translation": "to play", "type": "Verbo"}, {"word": "correr", "category": "Verbos", "level": 1, "translation": "to run", "type": "Verbo"}, {"word": "caminar", "category": "Verbos", "level": 1, "translation": "to walk", "type": "Verbo"}, {"word": "preguntar", "category": "Verbos", "level": 1, "translation": "to ask", "type": "Verbo"}, {"word": "responder", "category": "Verbos", "level": 1, "translation": "to answer", "type": "Verbo"}, {"word": "explicar", "category": "Verbos", "level": 1, "translation": "to explain", "type": "Verbo"}, {"word": "buscar", "category": "Verbos", "level": 1, "translation": "to look for", "type": "Verbo"}, {"word": "necesitar", "category": "Verbos", "level": 1, "translation": "to need", "type": "Verbo"}, {"word": "pagar", "category": "Verbos", "level": 1, "translation": "to pay", "type": "Verbo"}, {"word": "vender", "category": "Verbos", "level": 1, "translation": "to sell", "type": "Verbo"}, {"word": "ganar", "category": "Verbos", "level": 1, "translation": "to win/earn", "type": "Verbo"}, {"word": "perder", "category": "Verbos", "level": 1, "translation": "to lose", "type": "Verbo"}, {"word": "sentirse", "category": "Verbos", "level": 2, "translation": "to feel", "type": "Verbo"}, {"word": "pensar", "category": "Verbos", "level": 2, "translation": "to think", "type": "Verbo"}, {"word": "creer", "category": "Verbos", "level": 2, "translation": "to believe", "type": "Verbo"}, {"word": "intentar", "category": "Verbos", "level": 2, "translation": "to try", "type": "Verbo"}, {"word": "mudarse", "category": "Verbos", "level": 2, "translation": "to move (house)", "type": "Verbo"}, {"word": "arreglar", "category": "Verbos", "level": 2, "translation": "to fix", "type": "Verbo"}, {"word": "imaginar", "category": "Verbos", "level": 2, "translation": "to imagine", "type": "Verbo"}, {"word": "soñar", "category": "Verbos", "level": 2, "translation": "to dream", "type": "Verbo"}, {"word": "elegir", "category": "Verbos", "level": 2, "translation": "to choose", "type": "Verbo"}, {"word": "permitir", "category": "Verbos", "level": 2, "translation": "to allow", "type": "Verbo"}, {"word": "prohibir", "category": "Verbos", "level": 2, "translation": "to forbid", "type": "Verbo"}, {"word": "recomendar", "category": "Verbos", "level": 2, "translation": "to recommend", "type": "Verbo"}, {"word": "invitar", "category": "Verbos", "level": 2, "translation": "to invite", "type": "Verbo"}, {"word": "rechazar", "category": "Verbos", "level": 2, "translation": "to reject", "type": "Verbo"}, {"word": "prometer", "category": "Verbos", "level": 2, "translation": "to promise", "type": "Verbo"}, {"word": "lograr", "category": "Verbos", "level": 2, "translation": "to achieve", "type": "Verbo"}, {"word": "conseguir", "category": "Verbos", "level": 2, "translation": "to get/obtain", "type": "Verbo"}, {"word": "ahorrar", "category": "Verbos", "level": 2, "translation": "to save (money)", "type": "Verbo"}, {"word": "gastar", "category": "Verbos", "level": 2, "translation": "to spend", "type": "Verbo"}, {"word": "costar", "category": "Verbos", "level": 2, "translation": "to cost", "type": "Verbo"}, {"word": "mostrar", "category": "Verbos", "level": 2, "translation": "to show", "type": "Verbo"}, {"word": "guardar", "category": "Verbos", "level": 2, "translation": "to keep/save", "type": "Verbo"}, {"word": "competir", "category": "Verbos", "level": 2, "translation": "to compete", "type": "Verbo"}, {"word": "proteger", "category": "Verbos", "level": 2, "translation": "to protect", "type": "Verbo"}, {"word": "salvar", "category": "Verbos", "level": 2, "translation": "to save/rescue", "type": "Verbo"}, {"word": "calmarse", "category": "Verbos", "level": 2, "translation": "to calm down", "type": "Verbo"}, {"word": "agarrar", "category": "Verbos", "level": 2, "translation": "to grab", "type": "Verbo"}, {"word": "soltar", "category": "Verbos", "level": 2, "translation": "to let go", "type": "Verbo"}, {"word": "empujar", "category": "Verbos", "level": 2, "translation": "to push", "type": "Verbo"}, {"word": "cortarse", "category": "Verbos", "level": 2, "translation": "to cut oneself", "type": "Verbo"}, {"word": "pegar", "category": "Verbos", "level": 2, "translation": "to stick/hit", "type": "Verbo"}, {"word": "juntarse", "category": "Verbos", "level": 2, "translation": "to gather", "type": "Verbo"}, {"word": "hacerse", "category": "Verbos", "level": 2, "translation": "to become", "type": "Verbo"}, {"word": "mejorar", "category": "Verbos", "level": 2, "translation": "to improve", "type": "Verbo"}, {"word": "animarse a", "category": "Verbos", "level": 2, "translation": "to get the courage to", "type": "Verbo"}, {"word": "aplaudir", "category": "Verbos", "level": 2, "translation": "to applaud", "type": "Verbo"}, {"word": "molestar", "category": "Verbos", "level": 2, "translation": "to bother", "type": "Verbo"}, {"word": "subir", "category": "Verbos", "level": 2, "translation": "to go up/climb", "type": "Verbo"}, {"word": "fumar", "category": "Verbos", "level": 2, "translation": "to smoke", "type": "Verbo"}, {"word": "ofrecer", "category": "Verbos", "level": 2, "translation": "to offer", "type": "Verbo"}, {"word": "importar", "category": "Verbos", "level": 2, "translation": "to matter", "type": "Verbo"}, {"word": "enseñar", "category": "Verbos", "level": 2, "translation": "to teach", "type": "Verbo"}, {"word": "encantar", "category": "Verbos", "level": 2, "translation": "to delight/love", "type": "Verbo"}, {"word": "doler", "category": "Verbos", "level": 2, "translation": "to hurt", "type": "Verbo"}, {"word": "amar", "category": "Verbos", "level": 2, "translation": "to love", "type": "Verbo"}, {"word": "caer bien/mal", "category": "Verbos", "level": 2, "translation": "to like/dislike someone", "type": "Verbo"}, {"word": "conectar", "category": "Verbos", "level": 2, "translation": "to connect", "type": "Verbo"}, {"word": "volverse", "category": "Verbos", "level": 2, "translation": "to become", "type": "Verbo"}, {"word": "devolver", "category": "Verbos", "level": 2, "translation": "to return something", "type": "Verbo"}, {"word": "unirse", "category": "Verbos", "level": 2, "translation": "to join", "type": "Verbo"}, {"word": "imprimir", "category": "Verbos", "level": 2, "translation": "to print", "type": "Verbo"}, {"word": "disfrutar", "category": "Verbos", "level": 2, "translation": "to enjoy", "type": "Verbo"}, {"word": "dejar de", "category": "Verbos", "level": 2, "translation": "to stop doing", "type": "Verbo"}, {"word": "casarse", "category": "Verbos", "level": 2, "translation": "to get married", "type": "Verbo"}, {"word": "crear", "category": "Verbos", "level": 2, "translation": "to create", "type": "Verbo"}, {"word": "comprometerse", "category": "Verbos", "level": 2, "translation": "to commit", "type": "Verbo"}, {"word": "decidirse", "category": "Verbos", "level": 2, "translation": "to decide (make up mind)", "type": "Verbo"}, {"word": "aumentar", "category": "Verbos", "level": 2, "translation": "to increase", "type": "Verbo"}, {"word": "criar", "category": "Verbos", "level": 2, "translation": "to raise", "type": "Verbo"}, {"word": "retirarse", "category": "Verbos", "level": 2, "translation": "to retire", "type": "Verbo"}, {"word": "permanecer", "category": "Verbos", "level": 2, "translation": "to remain", "type": "Verbo"}, {"word": "extrañar", "category": "Verbos", "level": 2, "translation": "to miss", "type": "Verbo"}, {"word": "construir", "category": "Verbos", "level": 2, "translation": "to build", "type": "Verbo"}, {"word": "predecir", "category": "Verbos", "level": 2, "translation": "to predict", "type": "Verbo"}, {"word": "acostumbrarse", "category": "Verbos", "level": 2, "translation": "to get used to", "type": "Verbo"}, {"word": "revisar", "category": "Verbos", "level": 2, "translation": "to review", "type": "Verbo"}, {"word": "divorciarse", "category": "Verbos", "level": 2, "translation": "to get divorced", "type": "Verbo"}, {"word": "evitar", "category": "Verbos", "level": 2, "translation": "to avoid", "type": "Verbo"}, {"word": "superar", "category": "Verbos", "level": 2, "translation": "to overcome", "type": "Verbo"}, {"word": "resolver", "category": "Verbos", "level": 2, "translation": "to solve", "type": "Verbo"}, {"word": "quemarse", "category": "Verbos", "level": 2, "translation": "to burn oneself", "type": "Verbo"}, {"word": "impresionar", "category": "Verbos", "level": 2, "translation": "to impress", "type": "Verbo"}, {"word": "acercarse", "category": "Verbos", "level": 2, "translation": "to approach", "type": "Verbo"}, {"word": "alejarse", "category": "Verbos", "level": 2, "translation": "to move away", "type": "Verbo"}, {"word": "tropezarse", "category": "Verbos", "level": 2, "translation": "to stumble", "type": "Verbo"}, {"word": "descubrir", "category": "Verbos", "level": 2, "translation": "to discover", "type": "Verbo"}, {"word": "corregir", "category": "Verbos", "level": 2, "translation": "to correct", "type": "Verbo"}, {"word": "ponerse nervioso/a", "category": "Verbos", "level": 2, "translation": "to get nervous", "type": "Verbo"}, {"word": "acordarse de", "category": "Verbos", "level": 2, "translation": "to remember", "type": "Verbo"}, {"word": "oponerse", "category": "Verbos", "level": 2, "translation": "to oppose", "type": "Verbo"}, {"word": "parecerse a", "category": "Verbos", "level": 2, "translation": "to resemble", "type": "Verbo"}, {"word": "sobrevivir", "category": "Verbos", "level": 2, "translation": "to survive", "type": "Verbo"}, {"word": "comportarse", "category": "Verbos", "level": 2, "translation": "to behave", "type": "Verbo"}, {"word": "reconocer", "category": "Verbos", "level": 2, "translation": "to recognize/admit", "type": "Verbo"}, {"word": "fastidiar", "category": "Verbos", "level": 2, "translation": "to annoy", "type": "Verbo"}, {"word": "irritar", "category": "Verbos", "level": 2, "translation": "to irritate", "type": "Verbo"}, {"word": "resultar", "category": "Verbos", "level": 2, "translation": "to result/seem", "type": "Verbo"}, {"word": "fascinar", "category": "Verbos", "level": 2, "translation": "to fascinate", "type": "Verbo"}, {"word": "arruinar", "category": "Verbos", "level": 2, "translation": "to ruin", "type": "Verbo"}, {"word": "parecer", "category": "Verbos", "level": 2, "translation": "to seem", "type": "Verbo"}, {"word": "sonreír", "category": "Verbos", "level": 2, "translation": "to smile", "type": "Verbo"}, {"word": "oler", "category": "Verbos", "level": 2, "translation": "to smell", "type": "Verbo"}, {"word": "rezar", "category": "Verbos", "level": 2, "translation": "to pray", "type": "Verbo"}, {"word": "abrazar", "category": "Verbos", "level": 2, "translation": "to hug", "type": "Verbo"}, {"word": "arrodillarse", "category": "Verbos", "level": 2, "translation": "to kneel", "type": "Verbo"}, {"word": "doblar", "category": "Verbos", "level": 2, "translation": "to fold/bend", "type": "Verbo"}, {"word": "chocar", "category": "Verbos", "level": 2, "translation": "to crash/collide", "type": "Verbo"}, {"word": "extender", "category": "Verbos", "level": 2, "translation": "to extend", "type": "Verbo"}, {"word": "inclinar", "category": "Verbos", "level": 2, "translation": "to bend/incline", "type": "Verbo"}, {"word": "perderse", "category": "Verbos", "level": 2, "translation": "to get lost", "type": "Verbo"}, {"word": "pasear", "category": "Verbos", "level": 2, "translation": "to stroll", "type": "Verbo"}, {"word": "evaluar", "category": "Verbos", "level": 2, "translation": "to evaluate", "type": "Verbo"}, {"word": "reciclar", "category": "Verbos", "level": 2, "translation": "to recycle", "type": "Verbo"}, {"word": "reducir", "category": "Verbos", "level": 2, "translation": "to reduce", "type": "Verbo"}, {"word": "recoger", "category": "Verbos", "level": 2, "translation": "to pick up", "type": "Verbo"}, {"word": "alquilar", "category": "Verbos", "level": 2, "translation": "to rent", "type": "Verbo"}, {"word": "cometer errores", "category": "Verbos", "level": 2, "translation": "to make mistakes", "type": "Verbo"}, {"word": "apretar", "category": "Verbos", "level": 2, "translation": "to squeeze", "type": "Verbo"}, {"word": "hervir", "category": "Verbos", "level": 2, "translation": "to boil", "type": "Verbo"}, {"word": "quejarse", "category": "Verbos", "level": 2, "translation": "to complain", "type": "Verbo"}, {"word": "preocuparse", "category": "Verbos", "level": 2, "translation": "to worry", "type": "Verbo"}, {"word": "enojarse", "category": "Verbos", "level": 2, "translation": "to get angry", "type": "Verbo"}, {"word": "reírse", "category": "Verbos", "level": 2, "translation": "to laugh", "type": "Verbo"}, {"word": "gritar", "category": "Verbos", "level": 2, "translation": "to shout", "type": "Verbo"}, {"word": "susurrar", "category": "Verbos", "level": 2, "translation": "to whisper", "type": "Verbo"}, {"word": "tocar (un instrumento)", "category": "Verbos", "level": 2, "translation": "to play (an instrument)", "type": "Verbo"}, {"word": "dudar", "category": "Verbos", "level": 2, "translation": "to doubt", "type": "Verbo"}, {"word": "confiar", "category": "Verbos", "level": 2, "translation": "to trust", "type": "Verbo"}, {"word": "desconfiar", "category": "Verbos", "level": 2, "translation": "to distrust", "type": "Verbo"}, {"word": "admitir", "category": "Verbos", "level": 2, "translation": "to admit", "type": "Verbo"}, {"word": "confesar", "category": "Verbos", "level": 2, "translation": "to confess", "type": "Verbo"}, {"word": "mentir", "category": "Verbos", "level": 2, "translation": "to lie", "type": "Verbo"}, {"word": "negar", "category": "Verbos", "level": 2, "translation": "to deny", "type": "Verbo"}, {"word": "insistir", "category": "Verbos", "level": 2, "translation": "to insist", "type": "Verbo"}, {"word": "exigir", "category": "Verbos", "level": 2, "translation": "to demand", "type": "Verbo"}, {"word": "sugerir", "category": "Verbos", "level": 2, "translation": "to suggest", "type": "Verbo"}, {"word": "planear", "category": "Verbos", "level": 2, "translation": "to plan", "type": "Verbo"}, {"word": "organizar", "category": "Verbos", "level": 2, "translation": "to organize", "type": "Verbo"}, {"word": "participar", "category": "Verbos", "level": 2, "translation": "to participate", "type": "Verbo"}, {"word": "asistir", "category": "Verbos", "level": 2, "translation": "to attend", "type": "Verbo"}, {"word": "celebrar", "category": "Verbos", "level": 2, "translation": "to celebrate", "type": "Verbo"}, {"word": "felicitar", "category": "Verbos", "level": 2, "translation": "to congratulate", "type": "Verbo"}, {"word": "despedirse", "category": "Verbos", "level": 2, "translation": "to say goodbye", "type": "Verbo"}, {"word": "saludar", "category": "Verbos", "level": 2, "translation": "to greet", "type": "Verbo"}, {"word": "presentarse", "category": "Verbos", "level": 2, "translation": "to introduce oneself", "type": "Verbo"}, {"word": "asegurar", "category": "Verbos", "level": 3, "translation": "to assure", "type": "Verbo"}, {"word": "oscurecer", "category": "Verbos", "level": 3, "translation": "to get dark", "type": "Verbo"}, {"word": "armar", "category": "Verbos", "level": 3, "translation": "to set up", "type": "Verbo"}, {"word": "juzgar", "category": "Verbos", "level": 3, "translation": "to judge", "type": "Verbo"}, {"word": "poner límites", "category": "Verbos", "level": 3, "translation": "to set boundaries", "type": "Verbo"}, {"word": "pasarla bien", "category": "Verbos", "level": 3, "translation": "to have a good time", "type": "Verbo"}, {"word": "desarrollarse", "category": "Verbos", "level": 3, "translation": "to develop", "type": "Verbo"}, {"word": "pelear", "category": "Verbos", "level": 3, "translation": "to fight", "type": "Verbo"}, {"word": "proveer", "category": "Verbos", "level": 3, "translation": "to provide", "type": "Verbo"}, {"word": "coordinar", "category": "Verbos", "level": 3, "translation": "to coordinate", "type": "Verbo"}, {"word": "gestionar", "category": "Verbos", "level": 3, "translation": "to manage", "type": "Verbo"}, {"word": "improvisar", "category": "Verbos", "level": 3, "translation": "to improvise", "type": "Verbo"}, {"word": "respirar", "category": "Verbos", "level": 3, "translation": "to breathe", "type": "Verbo"}, {"word": "separarse", "category": "Verbos", "level": 3, "translation": "to separate", "type": "Verbo"}, {"word": "coquetear", "category": "Verbos", "level": 3, "translation": "to flirt", "type": "Verbo"}, {"word": "afrontar", "category": "Verbos", "level": 3, "translation": "to face/deal with", "type": "Verbo"}, {"word": "revolver", "category": "Verbos", "level": 3, "translation": "to stir/rummage", "type": "Verbo"}, {"word": "frotar", "category": "Verbos", "level": 3, "translation": "to rub", "type": "Verbo"}, {"word": "impedir", "category": "Verbos", "level": 3, "translation": "to hinder", "type": "Verbo"}, {"word": "desahogarse", "category": "Verbos", "level": 3, "translation": "to vent", "type": "Verbo"}, {"word": "identificarse", "category": "Verbos", "level": 3, "translation": "to identify oneself", "type": "Verbo"}, {"word": "distanciarse", "category": "Verbos", "level": 3, "translation": "to distance oneself", "type": "Verbo"}, {"word": "describirse", "category": "Verbos", "level": 3, "translation": "to describe oneself", "type": "Verbo"}, {"word": "retener", "category": "Verbos", "level": 3, "translation": "to retain", "type": "Verbo"}, {"word": "transmitir", "category": "Verbos", "level": 3, "translation": "to transmit", "type": "Verbo"}, {"word": "conservar", "category": "Verbos", "level": 3, "translation": "to preserve/keep", "type": "Verbo"}, {"word": "incomodar", "category": "Verbos", "level": 3, "translation": "to make uncomfortable", "type": "Verbo"}, {"word": "popularizar", "category": "Verbos", "level": 3, "translation": "to popularize", "type": "Verbo"}, {"word": "fomentar", "category": "Verbos", "level": 3, "translation": "to foster", "type": "Verbo"}, {"word": "adoptar", "category": "Verbos", "level": 3, "translation": "to adopt", "type": "Verbo"}, {"word": "emplear", "category": "Verbos", "level": 3, "translation": "to employ", "type": "Verbo"}, {"word": "ordeñar", "category": "Verbos", "level": 3, "translation": "to milk", "type": "Verbo"}, {"word": "arrebatar", "category": "Verbos", "level": 3, "translation": "to snatch", "type": "Verbo"}, {"word": "lustrar", "category": "Verbos", "level": 3, "translation": "to polish", "type": "Verbo"}, {"word": "fregar", "category": "Verbos", "level": 3, "translation": "to scrub", "type": "Verbo"}, {"word": "bendecir", "category": "Verbos", "level": 3, "translation": "to bless", "type": "Verbo"}, {"word": "compadecer", "category": "Verbos", "level": 3, "translation": "to pity", "type": "Verbo"}, {"word": "increpar", "category": "Verbos", "level": 3, "translation": "to rebuke", "type": "Verbo"}, {"word": "enloquecer", "category": "Verbos", "level": 3, "translation": "to go crazy", "type": "Verbo"}, {"word": "apoderarse", "category": "Verbos", "level": 3, "translation": "to seize", "type": "Verbo"}, {"word": "atreverse", "category": "Verbos", "level": 3, "translation": "to dare", "type": "Verbo"}, {"word": "desesperarse", "category": "Verbos", "level": 3, "translation": "to despair", "type": "Verbo"}, {"word": "recostarse", "category": "Verbos", "level": 3, "translation": "to lie down", "type": "Verbo"}, {"word": "alentar", "category": "Verbos", "level": 3, "translation": "to encourage", "type": "Verbo"}, {"word": "desplazarse", "category": "Verbos", "level": 3, "translation": "to move oneself", "type": "Verbo"}, {"word": "apagar", "category": "Verbos", "level": 3, "translation": "to turn off", "type": "Verbo"}, {"word": "aprovechar", "category": "Verbos", "level": 3, "translation": "to take advantage of", "type": "Verbo"}, {"word": "rendirse", "category": "Verbos", "level": 3, "translation": "to give up", "type": "Verbo"}, {"word": "arriesgar", "category": "Verbos", "level": 3, "translation": "to risk", "type": "Verbo"}, {"word": "destacar", "category": "Verbos", "level": 3, "translation": "to stand out", "type": "Verbo"}, {"word": "sospechar", "category": "Verbos", "level": 3, "translation": "to suspect", "type": "Verbo"}, {"word": "desahogar", "category": "Verbos", "level": 3, "translation": "to vent (something)", "type": "Verbo"}, {"word": "involucrarse", "category": "Verbos", "level": 3, "translation": "to get involved", "type": "Verbo"}, {"word": "comprometer", "category": "Verbos", "level": 3, "translation": "to compromise", "type": "Verbo"}, {"word": "desafiar", "category": "Verbos", "level": 3, "translation": "to challenge", "type": "Verbo"}, {"word": "revelar", "category": "Verbos", "level": 3, "translation": "to reveal", "type": "Verbo"}, {"word": "ocultar", "category": "Verbos", "level": 3, "translation": "to hide", "type": "Verbo"}, {"word": "enfrentar", "category": "Verbos", "level": 3, "translation": "to confront", "type": "Verbo"}, {"word": "desbordar", "category": "Verbos", "level": 3, "translation": "to overflow", "type": "Verbo"}, {"word": "perturbar", "category": "Verbos", "level": 3, "translation": "to disturb", "type": "Verbo"}, {"word": "conmover", "category": "Verbos", "level": 3, "translation": "to move (emotionally)", "type": "Verbo"}, {"word": "provocar", "category": "Verbos", "level": 3, "translation": "to provoke", "type": "Verbo"}, {"word": "bueno/a", "category": "Adjetivos generales", "level": 1, "translation": "good", "type": "Adjetivo"}, {"word": "malo/a", "category": "Adjetivos generales", "level": 1, "translation": "bad", "type": "Adjetivo"}, {"word": "grande", "category": "Adjetivos generales", "level": 1, "translation": "big", "type": "Adjetivo"}, {"word": "pequeño/a", "category": "Adjetivos generales", "level": 1, "translation": "small", "type": "Adjetivo"}, {"word": "feliz", "category": "Adjetivos generales", "level": 1, "translation": "happy", "type": "Adjetivo"}, {"word": "triste", "category": "Adjetivos generales", "level": 1, "translation": "sad", "type": "Adjetivo"}, {"word": "cansado/a", "category": "Adjetivos generales", "level": 1, "translation": "tired", "type": "Adjetivo"}, {"word": "fácil", "category": "Adjetivos generales", "level": 1, "translation": "easy", "type": "Adjetivo"}, {"word": "difícil", "category": "Adjetivos generales", "level": 1, "translation": "difficult", "type": "Adjetivo"}, {"word": "importante", "category": "Adjetivos generales", "level": 1, "translation": "important", "type": "Adjetivo"}, {"word": "interesante", "category": "Adjetivos generales", "level": 1, "translation": "interesting", "type": "Adjetivo"}, {"word": "diferente", "category": "Adjetivos generales", "level": 1, "translation": "different", "type": "Adjetivo"}, {"word": "mismo/a", "category": "Adjetivos generales", "level": 1, "translation": "same", "type": "Adjetivo"}, {"word": "rápido/a", "category": "Adjetivos generales", "level": 1, "translation": "fast", "type": "Adjetivo"}, {"word": "lento/a", "category": "Adjetivos generales", "level": 1, "translation": "slow", "type": "Adjetivo"}, {"word": "mejor", "category": "Adjetivos generales", "level": 1, "translation": "better", "type": "Adjetivo"}, {"word": "peor", "category": "Adjetivos generales", "level": 1, "translation": "worse", "type": "Adjetivo"}, {"word": "nuevo/a", "category": "Adjetivos generales", "level": 1, "translation": "new", "type": "Adjetivo"}, {"word": "viejo/a", "category": "Adjetivos generales", "level": 1, "translation": "old", "type": "Adjetivo"}, {"word": "alto/a", "category": "Adjetivos generales", "level": 1, "translation": "tall", "type": "Adjetivo"}, {"word": "bajo/a", "category": "Adjetivos generales", "level": 1, "translation": "short (height)", "type": "Adjetivo"}, {"word": "joven", "category": "Adjetivos generales", "level": 1, "translation": "young", "type": "Adjetivo"}, {"word": "sano/a", "category": "Adjetivos generales", "level": 1, "translation": "healthy", "type": "Adjetivo"}, {"word": "enfermo/a", "category": "Adjetivos generales", "level": 1, "translation": "sick", "type": "Adjetivo"}, {"word": "fuerte", "category": "Adjetivos generales", "level": 1, "translation": "strong", "type": "Adjetivo"}, {"word": "seguro/a", "category": "Adjetivos generales", "level": 1, "translation": "sure/safe", "type": "Adjetivo"}, {"word": "bonito/a", "category": "Adjetivos generales", "level": 1, "translation": "pretty", "type": "Adjetivo"}, {"word": "feo/a", "category": "Adjetivos generales", "level": 1, "translation": "ugly", "type": "Adjetivo"}, {"word": "caro/a", "category": "Adjetivos generales", "level": 1, "translation": "expensive", "type": "Adjetivo"}, {"word": "barato/a", "category": "Adjetivos generales", "level": 1, "translation": "cheap", "type": "Adjetivo"}, {"word": "limpio/a", "category": "Adjetivos generales", "level": 1, "translation": "clean", "type": "Adjetivo"}, {"word": "sucio/a", "category": "Adjetivos generales", "level": 1, "translation": "dirty", "type": "Adjetivo"}, {"word": "saludable", "category": "Adjetivos generales", "level": 2, "translation": "healthy", "type": "Adjetivo"}, {"word": "raro/a", "category": "Adjetivos generales", "level": 2, "translation": "weird", "type": "Adjetivo"}, {"word": "loco/a", "category": "Adjetivos generales", "level": 2, "translation": "crazy", "type": "Adjetivo"}, {"word": "predecible", "category": "Adjetivos generales", "level": 2, "translation": "predictable", "type": "Adjetivo"}, {"word": "impredecible", "category": "Adjetivos generales", "level": 2, "translation": "unpredictable", "type": "Adjetivo"}, {"word": "interesado/a", "category": "Adjetivos generales", "level": 2, "translation": "interested", "type": "Adjetivo"}, {"word": "enfocado/a", "category": "Adjetivos generales", "level": 2, "translation": "focused", "type": "Adjetivo"}, {"word": "poderoso/a", "category": "Adjetivos generales", "level": 2, "translation": "powerful", "type": "Adjetivo"}, {"word": "creativo/a", "category": "Adjetivos generales", "level": 2, "translation": "creative", "type": "Adjetivo"}, {"word": "frustrante", "category": "Adjetivos generales", "level": 2, "translation": "frustrating", "type": "Adjetivo"}, {"word": "gracioso/a", "category": "Adjetivos generales", "level": 2, "translation": "funny", "type": "Adjetivo"}, {"word": "alegre", "category": "Adjetivos generales", "level": 2, "translation": "cheerful", "type": "Adjetivo"}, {"word": "honesto/a", "category": "Adjetivos generales", "level": 2, "translation": "honest", "type": "Adjetivo"}, {"word": "roto/a", "category": "Adjetivos generales", "level": 2, "translation": "broken", "type": "Adjetivo"}, {"word": "mojado/a", "category": "Adjetivos generales", "level": 2, "translation": "wet", "type": "Adjetivo"}, {"word": "seco/a", "category": "Adjetivos generales", "level": 2, "translation": "dry", "type": "Adjetivo"}, {"word": "impresionante", "category": "Adjetivos generales", "level": 2, "translation": "impressive", "type": "Adjetivo"}, {"word": "extrovertido/a", "category": "Adjetivos generales", "level": 2, "translation": "extroverted", "type": "Adjetivo"}, {"word": "curioso/a", "category": "Adjetivos generales", "level": 2, "translation": "curious", "type": "Adjetivo"}, {"word": "desesperado/a", "category": "Adjetivos generales", "level": 2, "translation": "desperate", "type": "Adjetivo"}, {"word": "agradecido/a", "category": "Adjetivos generales", "level": 2, "translation": "grateful", "type": "Adjetivo"}, {"word": "cotidiano/a", "category": "Adjetivos generales", "level": 2, "translation": "everyday", "type": "Adjetivo"}, {"word": "educado/a", "category": "Adjetivos generales", "level": 2, "translation": "polite", "type": "Adjetivo"}, {"word": "maleducado/a", "category": "Adjetivos generales", "level": 2, "translation": "rude", "type": "Adjetivo"}, {"word": "estresante", "category": "Adjetivos generales", "level": 2, "translation": "stressful", "type": "Adjetivo"}, {"word": "inseguro/a", "category": "Adjetivos generales", "level": 2, "translation": "insecure", "type": "Adjetivo"}, {"word": "serio/a", "category": "Adjetivos generales", "level": 2, "translation": "serious", "type": "Adjetivo"}, {"word": "quieto/a", "category": "Adjetivos generales", "level": 2, "translation": "still", "type": "Adjetivo"}, {"word": "práctico/a", "category": "Adjetivos generales", "level": 2, "translation": "practical", "type": "Adjetivo"}, {"word": "actual", "category": "Adjetivos generales", "level": 2, "translation": "current", "type": "Adjetivo"}, {"word": "espontáneo/a", "category": "Adjetivos generales", "level": 2, "translation": "spontaneous", "type": "Adjetivo"}, {"word": "considerado/a", "category": "Adjetivos generales", "level": 2, "translation": "considered", "type": "Adjetivo"}, {"word": "equivocado/a", "category": "Adjetivos generales", "level": 2, "translation": "wrong", "type": "Adjetivo"}, {"word": "jubilado/a", "category": "Adjetivos generales", "level": 2, "translation": "retired", "type": "Adjetivo"}, {"word": "responsable", "category": "Adjetivos generales", "level": 2, "translation": "responsible", "type": "Adjetivo"}, {"word": "organizado/a", "category": "Adjetivos generales", "level": 2, "translation": "organized", "type": "Adjetivo"}, {"word": "introvertido/a", "category": "Adjetivos generales", "level": 2, "translation": "introverted", "type": "Adjetivo"}, {"word": "sociable", "category": "Adjetivos generales", "level": 2, "translation": "sociable", "type": "Adjetivo"}, {"word": "paciente", "category": "Adjetivos generales", "level": 2, "translation": "patient", "type": "Adjetivo"}, {"word": "impulsivo/a", "category": "Adjetivos generales", "level": 2, "translation": "impulsive", "type": "Adjetivo"}, {"word": "aventurero/a", "category": "Adjetivos generales", "level": 2, "translation": "adventurous", "type": "Adjetivo"}, {"word": "típico/a", "category": "Adjetivos generales", "level": 2, "translation": "typical", "type": "Adjetivo"}, {"word": "antiguo/a", "category": "Adjetivos generales", "level": 2, "translation": "ancient", "type": "Adjetivo"}, {"word": "especial", "category": "Adjetivos generales", "level": 2, "translation": "special", "type": "Adjetivo"}, {"word": "hambriento/a", "category": "Adjetivos generales", "level": 2, "translation": "hungry", "type": "Adjetivo"}, {"word": "vergonzoso/a", "category": "Adjetivos generales", "level": 2, "translation": "embarrassing", "type": "Adjetivo"}, {"word": "ocupado/a", "category": "Adjetivos generales", "level": 2, "translation": "busy", "type": "Adjetivo"}, {"word": "preocupado/a", "category": "Adjetivos generales", "level": 2, "translation": "worried", "type": "Adjetivo"}, {"word": "emocionante", "category": "Adjetivos generales", "level": 2, "translation": "exciting", "type": "Adjetivo"}, {"word": "aburrido/a", "category": "Adjetivos generales", "level": 2, "translation": "boring", "type": "Adjetivo"}, {"word": "divertido/a", "category": "Adjetivos generales", "level": 2, "translation": "fun", "type": "Adjetivo"}, {"word": "elegante", "category": "Adjetivos generales", "level": 2, "translation": "elegant", "type": "Adjetivo"}, {"word": "amable", "category": "Adjetivos generales", "level": 2, "translation": "kind", "type": "Adjetivo"}, {"word": "generoso/a", "category": "Adjetivos generales", "level": 2, "translation": "generous", "type": "Adjetivo"}, {"word": "tímido/a", "category": "Adjetivos generales", "level": 2, "translation": "shy", "type": "Adjetivo"}, {"word": "valiente", "category": "Adjetivos generales", "level": 2, "translation": "brave", "type": "Adjetivo"}, {"word": "flexible", "category": "Adjetivos generales", "level": 2, "translation": "flexible", "type": "Adjetivo"}, {"word": "útil", "category": "Adjetivos generales", "level": 2, "translation": "useful", "type": "Adjetivo"}, {"word": "necesario/a", "category": "Adjetivos generales", "level": 2, "translation": "necessary", "type": "Adjetivo"}, {"word": "posible", "category": "Adjetivos generales", "level": 2, "translation": "possible", "type": "Adjetivo"}, {"word": "imposible", "category": "Adjetivos generales", "level": 2, "translation": "impossible", "type": "Adjetivo"}, {"word": "involucrado/a", "category": "Adjetivos generales", "level": 3, "translation": "involved", "type": "Adjetivo"}, {"word": "solitario/a", "category": "Adjetivos generales", "level": 3, "translation": "solitary", "type": "Adjetivo"}, {"word": "escéptico/a", "category": "Adjetivos generales", "level": 3, "translation": "skeptical", "type": "Adjetivo"}, {"word": "estimulante", "category": "Adjetivos generales", "level": 3, "translation": "stimulating", "type": "Adjetivo"}, {"word": "perturbador/a", "category": "Adjetivos generales", "level": 3, "translation": "disturbing", "type": "Adjetivo"}, {"word": "cruel", "category": "Adjetivos generales", "level": 3, "translation": "cruel", "type": "Adjetivo"}, {"word": "perfeccionista", "category": "Adjetivos generales", "level": 3, "translation": "perfectionist", "type": "Adjetivo"}, {"word": "maravilloso/a", "category": "Adjetivos generales", "level": 3, "translation": "wonderful", "type": "Adjetivo"}, {"word": "contagioso/a", "category": "Adjetivos generales", "level": 3, "translation": "contagious", "type": "Adjetivo"}, {"word": "morboso/a", "category": "Adjetivos generales", "level": 3, "translation": "morbid", "type": "Adjetivo"}, {"word": "desconcertante", "category": "Adjetivos generales", "level": 3, "translation": "disconcerting", "type": "Adjetivo"}, {"word": "exhaustivo/a", "category": "Adjetivos generales", "level": 3, "translation": "exhaustive", "type": "Adjetivo"}, {"word": "arcaico/a", "category": "Adjetivos generales", "level": 3, "translation": "archaic", "type": "Adjetivo"}, {"word": "novedoso/a", "category": "Adjetivos generales", "level": 3, "translation": "novel", "type": "Adjetivo"}, {"word": "denso/a", "category": "Adjetivos generales", "level": 3, "translation": "dense", "type": "Adjetivo"}, {"word": "corpulento/a", "category": "Adjetivos generales", "level": 3, "translation": "stout", "type": "Adjetivo"}, {"word": "lacio/a", "category": "Adjetivos generales", "level": 3, "translation": "straight (hair)", "type": "Adjetivo"}, {"word": "erótico/a", "category": "Adjetivos generales", "level": 3, "translation": "erotic", "type": "Adjetivo"}, {"word": "desorientado/a", "category": "Adjetivos generales", "level": 3, "translation": "disoriented", "type": "Adjetivo"}, {"word": "torpe", "category": "Adjetivos generales", "level": 3, "translation": "clumsy", "type": "Adjetivo"}, {"word": "voraz", "category": "Adjetivos generales", "level": 3, "translation": "voracious", "type": "Adjetivo"}, {"word": "insoportable", "category": "Adjetivos generales", "level": 3, "translation": "unbearable", "type": "Adjetivo"}, {"word": "incierto/a", "category": "Adjetivos generales", "level": 3, "translation": "uncertain", "type": "Adjetivo"}, {"word": "desconocido/a", "category": "Adjetivos generales", "level": 3, "translation": "unknown", "type": "Adjetivo"}, {"word": "de hecho", "category": "Expresiones y frases hechas", "level": 1, "translation": "in fact", "type": "Expresión"}, {"word": "por eso", "category": "Expresiones y frases hechas", "level": 1, "translation": "that's why", "type": "Expresión"}, {"word": "hace + tiempo", "category": "Expresiones y frases hechas", "level": 1, "translation": "... ago", "type": "Expresión"}, {"word": "desde hace", "category": "Expresiones y frases hechas", "level": 1, "translation": "since", "type": "Expresión"}, {"word": "al principio", "category": "Expresiones y frases hechas", "level": 1, "translation": "at the beginning", "type": "Expresión"}, {"word": "darse cuenta", "category": "Expresiones y frases hechas", "level": 1, "translation": "to realize", "type": "Expresión"}, {"word": "tener razón", "category": "Expresiones y frases hechas", "level": 1, "translation": "to be right", "type": "Expresión"}, {"word": "dar vergüenza", "category": "Expresiones y frases hechas", "level": 1, "translation": "to feel embarrassed", "type": "Expresión"}, {"word": "según", "category": "Expresiones y frases hechas", "level": 1, "translation": "according to", "type": "Expresión"}, {"word": "por supuesto", "category": "Expresiones y frases hechas", "level": 1, "translation": "of course", "type": "Expresión"}, {"word": "poco a poco", "category": "Expresiones y frases hechas", "level": 1, "translation": "little by little", "type": "Expresión"}, {"word": "al final", "category": "Expresiones y frases hechas", "level": 1, "translation": "in the end", "type": "Expresión"}, {"word": "en general", "category": "Expresiones y frases hechas", "level": 1, "translation": "in general", "type": "Expresión"}, {"word": "a veces", "category": "Expresiones y frases hechas", "level": 1, "translation": "sometimes", "type": "Expresión"}, {"word": "de repente", "category": "Expresiones y frases hechas", "level": 1, "translation": "suddenly", "type": "Expresión"}, {"word": "de casualidad", "category": "Expresiones y frases hechas", "level": 2, "translation": "by chance", "type": "Expresión"}, {"word": "tener confianza con/en alguien", "category": "Expresiones y frases hechas", "level": 2, "translation": "to trust/be close with someone", "type": "Expresión"}, {"word": "volverse loco/a", "category": "Expresiones y frases hechas", "level": 2, "translation": "to go crazy", "type": "Expresión"}, {"word": "a propósito", "category": "Expresiones y frases hechas", "level": 2, "translation": "on purpose", "type": "Expresión"}, {"word": "bajar la mirada", "category": "Expresiones y frases hechas", "level": 2, "translation": "to look down", "type": "Expresión"}, {"word": "hacer falta", "category": "Expresiones y frases hechas", "level": 2, "translation": "to be needed", "type": "Expresión"}, {"word": "de mente abierta", "category": "Expresiones y frases hechas", "level": 2, "translation": "open-minded", "type": "Expresión"}, {"word": "al alba", "category": "Expresiones y frases hechas", "level": 2, "translation": "at dawn", "type": "Expresión"}, {"word": "sin embargo", "category": "Expresiones y frases hechas", "level": 2, "translation": "however", "type": "Expresión"}, {"word": "por otro lado", "category": "Expresiones y frases hechas", "level": 2, "translation": "on the other hand", "type": "Expresión"}, {"word": "en primer lugar", "category": "Expresiones y frases hechas", "level": 2, "translation": "first of all", "type": "Expresión"}, {"word": "en conclusión", "category": "Expresiones y frases hechas", "level": 2, "translation": "in conclusion", "type": "Expresión"}, {"word": "gracias a", "category": "Expresiones y frases hechas", "level": 2, "translation": "thanks to", "type": "Expresión"}, {"word": "con el tiempo", "category": "Expresiones y frases hechas", "level": 2, "translation": "over time", "type": "Expresión"}, {"word": "tener miedo", "category": "Expresiones y frases hechas", "level": 2, "translation": "to be afraid", "type": "Expresión"}, {"word": "tener suerte", "category": "Expresiones y frases hechas", "level": 2, "translation": "to be lucky", "type": "Expresión"}, {"word": "hacer caso", "category": "Expresiones y frases hechas", "level": 2, "translation": "to pay attention", "type": "Expresión"}, {"word": "dar la mano", "category": "Expresiones y frases hechas", "level": 2, "translation": "to shake hands", "type": "Expresión"}, {"word": "dar un beso", "category": "Expresiones y frases hechas", "level": 2, "translation": "to give a kiss", "type": "Expresión"}, {"word": "tratarse de", "category": "Expresiones y frases hechas", "level": 3, "translation": "to be about", "type": "Expresión"}, {"word": "desmeritar", "category": "Expresiones y frases hechas", "level": 3, "translation": "to belittle", "type": "Expresión"}, {"word": "por si", "category": "Expresiones y frases hechas", "level": 3, "translation": "in case", "type": "Expresión"}, {"word": "por eso mismo", "category": "Expresiones y frases hechas", "level": 3, "translation": "for that very reason", "type": "Expresión"}, {"word": "a más no poder", "category": "Expresiones y frases hechas", "level": 3, "translation": "to the utmost", "type": "Expresión"}, {"word": "de mal gusto", "category": "Expresiones y frases hechas", "level": 3, "translation": "in bad taste", "type": "Expresión"}, {"word": "de buena/mala gana", "category": "Expresiones y frases hechas", "level": 3, "translation": "willingly/unwillingly", "type": "Expresión"}, {"word": "el móvil", "category": "La tecnología y las redes sociales", "level": 1, "translation": "cell phone", "type": "Sustantivo"}, {"word": "la aplicación", "category": "La tecnología y las redes sociales", "level": 1, "translation": "app", "type": "Sustantivo"}, {"word": "la pantalla", "category": "La tecnología y las redes sociales", "level": 1, "translation": "screen", "type": "Sustantivo"}, {"word": "la cuenta", "category": "La tecnología y las redes sociales", "level": 1, "translation": "account", "type": "Sustantivo"}, {"word": "el internet", "category": "La tecnología y las redes sociales", "level": 1, "translation": "internet", "type": "Sustantivo"}, {"word": "el teléfono", "category": "La tecnología y las redes sociales", "level": 1, "translation": "phone", "type": "Sustantivo"}, {"word": "las redes sociales", "category": "La tecnología y las redes sociales", "level": 2, "translation": "social media", "type": "Sustantivo"}, {"word": "la publicación", "category": "La tecnología y las redes sociales", "level": 2, "translation": "post", "type": "Sustantivo"}, {"word": "el comentario", "category": "La tecnología y las redes sociales", "level": 2, "translation": "comment", "type": "Sustantivo"}, {"word": "los datos personales", "category": "La tecnología y las redes sociales", "level": 2, "translation": "personal data", "type": "Sustantivo"}, {"word": "la notificación", "category": "La tecnología y las redes sociales", "level": 2, "translation": "notification", "type": "Sustantivo"}, {"word": "la autoestima", "category": "La tecnología y las redes sociales", "level": 3, "translation": "self-esteem", "type": "Sustantivo"}, {"word": "la privacidad", "category": "La tecnología y las redes sociales", "level": 3, "translation": "privacy", "type": "Sustantivo"}, {"word": "el algoritmo", "category": "La tecnología y las redes sociales", "level": 3, "translation": "algorithm", "type": "Sustantivo"}, {"word": "la cebolla", "category": "La comida y la cocina", "level": 1, "translation": "onion", "type": "Sustantivo"}, {"word": "la carne", "category": "La comida y la cocina", "level": 1, "translation": "meat", "type": "Sustantivo"}, {"word": "la sal", "category": "La comida y la cocina", "level": 1, "translation": "salt", "type": "Sustantivo"}, {"word": "el arroz", "category": "La comida y la cocina", "level": 1, "translation": "rice", "type": "Sustantivo"}, {"word": "la ensalada", "category": "La comida y la cocina", "level": 1, "translation": "salad", "type": "Sustantivo"}, {"word": "el pan", "category": "La comida y la cocina", "level": 1, "translation": "bread", "type": "Sustantivo"}, {"word": "el agua", "category": "La comida y la cocina", "level": 1, "translation": "water", "type": "Sustantivo"}, {"word": "el café", "category": "La comida y la cocina", "level": 1, "translation": "coffee", "type": "Sustantivo"}, {"word": "la leche", "category": "La comida y la cocina", "level": 1, "translation": "milk", "type": "Sustantivo"}, {"word": "la salsa", "category": "La comida y la cocina", "level": 2, "translation": "sauce", "type": "Sustantivo"}, {"word": "la harina", "category": "La comida y la cocina", "level": 2, "translation": "flour", "type": "Sustantivo"}, {"word": "el calabacín", "category": "La comida y la cocina", "level": 2, "translation": "zucchini", "type": "Sustantivo"}, {"word": "el horno", "category": "La comida y la cocina", "level": 2, "translation": "oven", "type": "Sustantivo"}, {"word": "la parrilla", "category": "La comida y la cocina", "level": 2, "translation": "grill", "type": "Sustantivo"}, {"word": "los frijoles", "category": "La comida y la cocina", "level": 2, "translation": "beans", "type": "Sustantivo"}, {"word": "el sabor", "category": "La comida y la cocina", "level": 2, "translation": "flavor", "type": "Sustantivo"}, {"word": "la taza", "category": "La comida y la cocina", "level": 2, "translation": "cup", "type": "Sustantivo"}, {"word": "el azúcar", "category": "La comida y la cocina", "level": 2, "translation": "sugar", "type": "Sustantivo"}, {"word": "la fruta", "category": "La comida y la cocina", "level": 2, "translation": "fruit", "type": "Sustantivo"}, {"word": "las costillas de cerdo", "category": "La comida y la cocina", "level": 3, "translation": "pork ribs", "type": "Sustantivo"}, {"word": "el atún en lata", "category": "La comida y la cocina", "level": 3, "translation": "canned tuna", "type": "Sustantivo"}, {"word": "las vísceras", "category": "La comida y la cocina", "level": 3, "translation": "organ meats", "type": "Sustantivo"}, {"word": "las mollejas", "category": "La comida y la cocina", "level": 3, "translation": "sweetbreads", "type": "Sustantivo"}, {"word": "la avena", "category": "La comida y la cocina", "level": 3, "translation": "oats", "type": "Sustantivo"}, {"word": "la leche de almendras", "category": "La comida y la cocina", "level": 3, "translation": "almond milk", "type": "Sustantivo"}, {"word": "la levadura", "category": "La comida y la cocina", "level": 3, "translation": "yeast", "type": "Sustantivo"}, {"word": "los pasteles dulces", "category": "La comida y la cocina", "level": 3, "translation": "sweet pastries", "type": "Sustantivo"}, {"word": "el guisado", "category": "La comida y la cocina", "level": 3, "translation": "stew", "type": "Sustantivo"}, {"word": "el caldo", "category": "La comida y la cocina", "level": 3, "translation": "broth", "type": "Sustantivo"}, {"word": "la tienda de comestibles", "category": "La comida y la cocina", "level": 3, "translation": "grocery store", "type": "Sustantivo"}, {"word": "el carrito", "category": "La comida y la cocina", "level": 3, "translation": "cart", "type": "Sustantivo"}, {"word": "el condimento", "category": "La comida y la cocina", "level": 3, "translation": "condiment", "type": "Sustantivo"}, {"word": "el cerebro", "category": "El cuerpo y la salud", "level": 1, "translation": "brain", "type": "Sustantivo"}, {"word": "la fiebre", "category": "El cuerpo y la salud", "level": 1, "translation": "fever", "type": "Sustantivo"}, {"word": "la cabeza", "category": "El cuerpo y la salud", "level": 1, "translation": "head", "type": "Sustantivo"}, {"word": "la mano", "category": "El cuerpo y la salud", "level": 1, "translation": "hand", "type": "Sustantivo"}, {"word": "el pie", "category": "El cuerpo y la salud", "level": 1, "translation": "foot", "type": "Sustantivo"}, {"word": "el bienestar", "category": "El cuerpo y la salud", "level": 2, "translation": "well-being", "type": "Sustantivo"}, {"word": "el equilibrio", "category": "El cuerpo y la salud", "level": 2, "translation": "balance", "type": "Sustantivo"}, {"word": "la alimentación", "category": "El cuerpo y la salud", "level": 2, "translation": "diet/nutrition", "type": "Sustantivo"}, {"word": "el tatuaje", "category": "El cuerpo y la salud", "level": 2, "translation": "tattoo", "type": "Sustantivo"}, {"word": "el dolor", "category": "El cuerpo y la salud", "level": 2, "translation": "pain", "type": "Sustantivo"}, {"word": "el disfrute", "category": "El cuerpo y la salud", "level": 3, "translation": "enjoyment", "type": "Sustantivo"}, {"word": "la vergüenza", "category": "El cuerpo y la salud", "level": 3, "translation": "embarrassment/shame", "type": "Sustantivo"}, {"word": "el síndrome", "category": "El cuerpo y la salud", "level": 3, "translation": "syndrome", "type": "Sustantivo"}, {"word": "la indigestión", "category": "El cuerpo y la salud", "level": 3, "translation": "indigestion", "type": "Sustantivo"}, {"word": "el río", "category": "Los viajes y la naturaleza", "level": 1, "translation": "river", "type": "Sustantivo"}, {"word": "el mar", "category": "Los viajes y la naturaleza", "level": 1, "translation": "sea", "type": "Sustantivo"}, {"word": "los caballos", "category": "Los viajes y la naturaleza", "level": 1, "translation": "horses", "type": "Sustantivo"}, {"word": "el desafío", "category": "Los viajes y la naturaleza", "level": 1, "translation": "challenge", "type": "Sustantivo"}, {"word": "el sol", "category": "Los viajes y la naturaleza", "level": 1, "translation": "sun", "type": "Sustantivo"}, {"word": "la playa", "category": "Los viajes y la naturaleza", "level": 1, "translation": "beach", "type": "Sustantivo"}, {"word": "el árbol", "category": "Los viajes y la naturaleza", "level": 1, "translation": "tree", "type": "Sustantivo"}, {"word": "la rutina", "category": "Los viajes y la naturaleza", "level": 2, "translation": "routine", "type": "Sustantivo"}, {"word": "la selva", "category": "Los viajes y la naturaleza", "level": 2, "translation": "jungle", "type": "Sustantivo"}, {"word": "el bote", "category": "Los viajes y la naturaleza", "level": 2, "translation": "boat", "type": "Sustantivo"}, {"word": "el desconocido / la desconocida", "category": "Los viajes y la naturaleza", "level": 2, "translation": "a stranger", "type": "Sustantivo"}, {"word": "la cascada", "category": "Los viajes y la naturaleza", "level": 2, "translation": "waterfall", "type": "Sustantivo"}, {"word": "el humo", "category": "Los viajes y la naturaleza", "level": 2, "translation": "smoke", "type": "Sustantivo"}, {"word": "el océano", "category": "Los viajes y la naturaleza", "level": 2, "translation": "ocean", "type": "Sustantivo"}, {"word": "el glaciar", "category": "Los viajes y la naturaleza", "level": 2, "translation": "glacier", "type": "Sustantivo"}, {"word": "las cataratas", "category": "Los viajes y la naturaleza", "level": 2, "translation": "waterfalls", "type": "Sustantivo"}, {"word": "el paisaje", "category": "Los viajes y la naturaleza", "level": 2, "translation": "landscape", "type": "Sustantivo"}, {"word": "la ballena", "category": "Los viajes y la naturaleza", "level": 3, "translation": "whale", "type": "Sustantivo"}, {"word": "la escalinata", "category": "Los viajes y la naturaleza", "level": 3, "translation": "steps", "type": "Sustantivo"}, {"word": "la terma", "category": "Los viajes y la naturaleza", "level": 3, "translation": "hot spring", "type": "Sustantivo"}, {"word": "la sequía", "category": "Los viajes y la naturaleza", "level": 3, "translation": "drought", "type": "Sustantivo"}, {"word": "la foca", "category": "Los viajes y la naturaleza", "level": 3, "translation": "seal", "type": "Sustantivo"}, {"word": "el jabalí", "category": "Los viajes y la naturaleza", "level": 3, "translation": "boar", "type": "Sustantivo"}, {"word": "la cerca", "category": "Los viajes y la naturaleza", "level": 3, "translation": "fence", "type": "Sustantivo"}, {"word": "la tienda de campaña", "category": "Los viajes y la naturaleza", "level": 3, "translation": "tent", "type": "Sustantivo"}, {"word": "los vaqueros", "category": "Los viajes y la naturaleza", "level": 3, "translation": "cowboys", "type": "Sustantivo"}, {"word": "la irrigación", "category": "Los viajes y la naturaleza", "level": 3, "translation": "irrigation", "type": "Sustantivo"}, {"word": "la Edad Media", "category": "Los viajes y la naturaleza", "level": 3, "translation": "Middle Ages", "type": "Sustantivo"}, {"word": "el combustible", "category": "Los viajes y la naturaleza", "level": 3, "translation": "fuel", "type": "Sustantivo"}, {"word": "los nómadas", "category": "Los viajes y la naturaleza", "level": 3, "translation": "nomads", "type": "Sustantivo"}, {"word": "las ovejas", "category": "Los viajes y la naturaleza", "level": 3, "translation": "sheep", "type": "Sustantivo"}, {"word": "el sauce", "category": "Los viajes y la naturaleza", "level": 3, "translation": "willow tree", "type": "Sustantivo"}, {"word": "el césped", "category": "Los viajes y la naturaleza", "level": 3, "translation": "grass", "type": "Sustantivo"}, {"word": "el pingüino", "category": "Los viajes y la naturaleza", "level": 3, "translation": "penguin", "type": "Sustantivo"}, {"word": "la espada", "category": "Los viajes y la naturaleza", "level": 3, "translation": "sword", "type": "Sustantivo"}, {"word": "el desierto", "category": "Los viajes y la naturaleza", "level": 3, "translation": "desert", "type": "Sustantivo"}, {"word": "la turquesa", "category": "Los viajes y la naturaleza", "level": 3, "translation": "turquoise", "type": "Sustantivo"}, {"word": "el eclipse", "category": "Los viajes y la naturaleza", "level": 3, "translation": "eclipse", "type": "Sustantivo"}, {"word": "el miedo", "category": "Las emociones y las relaciones", "level": 1, "translation": "fear", "type": "Sustantivo"}, {"word": "el amor", "category": "Las emociones y las relaciones", "level": 1, "translation": "love", "type": "Sustantivo"}, {"word": "el odio", "category": "Las emociones y las relaciones", "level": 1, "translation": "hate", "type": "Sustantivo"}, {"word": "el abrazo", "category": "Las emociones y las relaciones", "level": 1, "translation": "hug", "type": "Sustantivo"}, {"word": "el beso", "category": "Las emociones y las relaciones", "level": 1, "translation": "kiss", "type": "Sustantivo"}, {"word": "la confianza", "category": "Las emociones y las relaciones", "level": 2, "translation": "trust", "type": "Sustantivo"}, {"word": "la libertad", "category": "Las emociones y las relaciones", "level": 2, "translation": "freedom", "type": "Sustantivo"}, {"word": "las emociones", "category": "Las emociones y las relaciones", "level": 2, "translation": "emotions", "type": "Sustantivo"}, {"word": "la felicidad", "category": "Las emociones y las relaciones", "level": 2, "translation": "happiness", "type": "Sustantivo"}, {"word": "la amistad", "category": "Las emociones y las relaciones", "level": 2, "translation": "friendship", "type": "Sustantivo"}, {"word": "la risa", "category": "Las emociones y las relaciones", "level": 2, "translation": "laughter", "type": "Sustantivo"}, {"word": "el sentimiento", "category": "Las emociones y las relaciones", "level": 2, "translation": "feeling", "type": "Sustantivo"}, {"word": "el deseo", "category": "Las emociones y las relaciones", "level": 3, "translation": "desire", "type": "Sustantivo"}, {"word": "las expectativas", "category": "Las emociones y las relaciones", "level": 3, "translation": "expectations", "type": "Sustantivo"}, {"word": "el amorío", "category": "Las emociones y las relaciones", "level": 3, "translation": "affair", "type": "Sustantivo"}, {"word": "el amante", "category": "Las emociones y las relaciones", "level": 3, "translation": "lover", "type": "Sustantivo"}, {"word": "la jerarquía", "category": "Las emociones y las relaciones", "level": 3, "translation": "hierarchy", "type": "Sustantivo"}, {"word": "el malentendido", "category": "Las emociones y las relaciones", "level": 3, "translation": "misunderstanding", "type": "Sustantivo"}, {"word": "la descarga", "category": "Las emociones y las relaciones", "level": 3, "translation": "discharge/relief", "type": "Sustantivo"}, {"word": "la amargura", "category": "Las emociones y las relaciones", "level": 3, "translation": "bitterness", "type": "Sustantivo"}, {"word": "la certeza", "category": "Las emociones y las relaciones", "level": 3, "translation": "certainty", "type": "Sustantivo"}, {"word": "la nostalgia", "category": "Las emociones y las relaciones", "level": 3, "translation": "nostalgia", "type": "Sustantivo"}, {"word": "los padres", "category": "La familia y las generaciones", "level": 1, "translation": "parents", "type": "Sustantivo"}, {"word": "el cumpleaños", "category": "La familia y las generaciones", "level": 1, "translation": "birthday", "type": "Sustantivo"}, {"word": "la familia", "category": "La familia y las generaciones", "level": 1, "translation": "family", "type": "Sustantivo"}, {"word": "la adolescencia", "category": "La familia y las generaciones", "level": 2, "translation": "adolescence", "type": "Sustantivo"}, {"word": "la herencia", "category": "La familia y las generaciones", "level": 2, "translation": "heritage/inheritance", "type": "Sustantivo"}, {"word": "la etiqueta", "category": "La familia y las generaciones", "level": 2, "translation": "label", "type": "Sustantivo"}, {"word": "el matrimonio", "category": "La familia y las generaciones", "level": 2, "translation": "marriage", "type": "Sustantivo"}, {"word": "el divorcio", "category": "La familia y las generaciones", "level": 2, "translation": "divorce", "type": "Sustantivo"}, {"word": "la portada", "category": "La familia y las generaciones", "level": 3, "translation": "cover", "type": "Sustantivo"}, {"word": "el refrán", "category": "La familia y las generaciones", "level": 3, "translation": "saying/proverb", "type": "Sustantivo"}, {"word": "la generación", "category": "La familia y las generaciones", "level": 3, "translation": "generation", "type": "Sustantivo"}, {"word": "el nivel", "category": "El trabajo y el estudio", "level": 1, "translation": "level", "type": "Sustantivo"}, {"word": "la entrevista", "category": "El trabajo y el estudio", "level": 1, "translation": "interview", "type": "Sustantivo"}, {"word": "el empleado", "category": "El trabajo y el estudio", "level": 1, "translation": "employee", "type": "Sustantivo"}, {"word": "la oficina", "category": "El trabajo y el estudio", "level": 1, "translation": "office", "type": "Sustantivo"}, {"word": "el trabajo", "category": "El trabajo y el estudio", "level": 1, "translation": "work/job", "type": "Sustantivo"}, {"word": "la reunión", "category": "El trabajo y el estudio", "level": 2, "translation": "meeting", "type": "Sustantivo"}, {"word": "los recursos", "category": "El trabajo y el estudio", "level": 2, "translation": "resources", "type": "Sustantivo"}, {"word": "el privilegio", "category": "El trabajo y el estudio", "level": 2, "translation": "privilege", "type": "Sustantivo"}, {"word": "el arquitecto / la arquitecta", "category": "El trabajo y el estudio", "level": 2, "translation": "architect", "type": "Sustantivo"}, {"word": "el mesero / la mesera", "category": "El trabajo y el estudio", "level": 2, "translation": "waiter/waitress", "type": "Sustantivo"}, {"word": "la enfermera", "category": "El trabajo y el estudio", "level": 2, "translation": "nurse", "type": "Sustantivo"}, {"word": "el jefe / la jefa", "category": "El trabajo y el estudio", "level": 2, "translation": "boss", "type": "Sustantivo"}, {"word": "la empresa", "category": "El trabajo y el estudio", "level": 2, "translation": "company", "type": "Sustantivo"}, {"word": "la recaudación de fondos", "category": "El trabajo y el estudio", "level": 3, "translation": "fundraising", "type": "Sustantivo"}, {"word": "el supervisor", "category": "El trabajo y el estudio", "level": 3, "translation": "supervisor", "type": "Sustantivo"}, {"word": "los beneficios", "category": "El trabajo y el estudio", "level": 3, "translation": "benefits", "type": "Sustantivo"}, {"word": "la investigación", "category": "El trabajo y el estudio", "level": 3, "translation": "research", "type": "Sustantivo"}, {"word": "el tema", "category": "El trabajo y el estudio", "level": 3, "translation": "topic", "type": "Sustantivo"}, {"word": "las prioridades", "category": "El trabajo y el estudio", "level": 3, "translation": "priorities", "type": "Sustantivo"}, {"word": "el sueldo", "category": "El trabajo y el estudio", "level": 3, "translation": "salary", "type": "Sustantivo"}, {"word": "el consejo", "category": "El comportamiento social", "level": 1, "translation": "advice", "type": "Sustantivo"}, {"word": "la regla", "category": "El comportamiento social", "level": 1, "translation": "rule", "type": "Sustantivo"}, {"word": "la encuesta", "category": "El comportamiento social", "level": 2, "translation": "survey", "type": "Sustantivo"}, {"word": "el comportamiento", "category": "El comportamiento social", "level": 2, "translation": "behavior", "type": "Sustantivo"}, {"word": "el defecto", "category": "El comportamiento social", "level": 2, "translation": "flaw", "type": "Sustantivo"}, {"word": "el volumen", "category": "El comportamiento social", "level": 2, "translation": "volume", "type": "Sustantivo"}, {"word": "el ascensor", "category": "El comportamiento social", "level": 2, "translation": "elevator", "type": "Sustantivo"}, {"word": "la costumbre", "category": "El comportamiento social", "level": 2, "translation": "custom/habit", "type": "Sustantivo"}, {"word": "la expectativa", "category": "El comportamiento social", "level": 3, "translation": "expectation", "type": "Sustantivo"}, {"word": "el desvío", "category": "El comportamiento social", "level": 3, "translation": "detour", "type": "Sustantivo"}, {"word": "la falta de respeto", "category": "El comportamiento social", "level": 3, "translation": "lack of respect", "type": "Sustantivo"}, {"word": "la convivencia", "category": "El comportamiento social", "level": 3, "translation": "living together/coexistence", "type": "Sustantivo"}, {"word": "el prejuicio", "category": "El comportamiento social", "level": 3, "translation": "prejudice", "type": "Sustantivo"}, {"word": "el gesto", "category": "Los saludos y la cultura", "level": 1, "translation": "gesture", "type": "Sustantivo"}, {"word": "la leyenda", "category": "Los saludos y la cultura", "level": 2, "translation": "legend", "type": "Sustantivo"}, {"word": "la señal", "category": "Los saludos y la cultura", "level": 2, "translation": "sign", "type": "Sustantivo"}, {"word": "la reverencia", "category": "Los saludos y la cultura", "level": 2, "translation": "bow", "type": "Sustantivo"}, {"word": "la ceremonia", "category": "Los saludos y la cultura", "level": 2, "translation": "ceremony", "type": "Sustantivo"}, {"word": "el ritual", "category": "Los saludos y la cultura", "level": 3, "translation": "ritual", "type": "Sustantivo"}, {"word": "la ropa", "category": "La casa y los objetos", "level": 1, "translation": "clothes", "type": "Sustantivo"}, {"word": "la foto", "category": "La casa y los objetos", "level": 1, "translation": "photo", "type": "Sustantivo"}, {"word": "el video", "category": "La casa y los objetos", "level": 1, "translation": "video", "type": "Sustantivo"}, {"word": "la cartera", "category": "La casa y los objetos", "level": 1, "translation": "wallet", "type": "Sustantivo"}, {"word": "la mesa", "category": "La casa y los objetos", "level": 1, "translation": "table", "type": "Sustantivo"}, {"word": "la silla", "category": "La casa y los objetos", "level": 1, "translation": "chair", "type": "Sustantivo"}, {"word": "la tela", "category": "La casa y los objetos", "level": 2, "translation": "fabric", "type": "Sustantivo"}, {"word": "la pintura", "category": "La casa y los objetos", "level": 2, "translation": "painting", "type": "Sustantivo"}, {"word": "la imagen", "category": "La casa y los objetos", "level": 2, "translation": "image", "type": "Sustantivo"}, {"word": "el cepillo de dientes", "category": "La casa y los objetos", "level": 2, "translation": "toothbrush", "type": "Sustantivo"}, {"word": "la almohada", "category": "La casa y los objetos", "level": 2, "translation": "pillow", "type": "Sustantivo"}, {"word": "el rompecabezas", "category": "La casa y los objetos", "level": 2, "translation": "puzzle", "type": "Sustantivo"}, {"word": "el ajedrez", "category": "La casa y los objetos", "level": 2, "translation": "chess", "type": "Sustantivo"}, {"word": "el dado", "category": "La casa y los objetos", "level": 2, "translation": "dice", "type": "Sustantivo"}, {"word": "la cubeta", "category": "La casa y los objetos", "level": 2, "translation": "bucket", "type": "Sustantivo"}, {"word": "la llave", "category": "La casa y los objetos", "level": 2, "translation": "key", "type": "Sustantivo"}, {"word": "la soga", "category": "La casa y los objetos", "level": 3, "translation": "rope", "type": "Sustantivo"}, {"word": "el gel", "category": "La casa y los objetos", "level": 3, "translation": "gel", "type": "Sustantivo"}, {"word": "los muñecos / las muñecas", "category": "La casa y los objetos", "level": 3, "translation": "dolls", "type": "Sustantivo"}, {"word": "el retrato", "category": "La casa y los objetos", "level": 3, "translation": "portrait", "type": "Sustantivo"}, {"word": "el mal gusto", "category": "La casa y los objetos", "level": 3, "translation": "bad taste", "type": "Sustantivo"}, {"word": "la clase alta", "category": "La casa y los objetos", "level": 3, "translation": "upper class", "type": "Sustantivo"}, {"word": "el cambio", "category": "La casa y los objetos", "level": 3, "translation": "change", "type": "Sustantivo"}, {"word": "la sonrisa", "category": "La casa y los objetos", "level": 3, "translation": "smile", "type": "Sustantivo"}, {"word": "el cuero", "category": "La casa y los objetos", "level": 3, "translation": "leather", "type": "Sustantivo"}, {"word": "el concurso", "category": "La casa y los objetos", "level": 3, "translation": "contest", "type": "Sustantivo"}, {"word": "la canción", "category": "El cine, las series y el entretenimiento", "level": 1, "translation": "song", "type": "Sustantivo"}, {"word": "la película", "category": "El cine, las series y el entretenimiento", "level": 1, "translation": "movie", "type": "Sustantivo"}, {"word": "el personaje", "category": "El cine, las series y el entretenimiento", "level": 2, "translation": "character", "type": "Sustantivo"}, {"word": "el elenco", "category": "El cine, las series y el entretenimiento", "level": 2, "translation": "cast", "type": "Sustantivo"}, {"word": "la temporada", "category": "El cine, las series y el entretenimiento", "level": 2, "translation": "season", "type": "Sustantivo"}, {"word": "el programa", "category": "El cine, las series y el entretenimiento", "level": 2, "translation": "program/show", "type": "Sustantivo"}, {"word": "la obra de teatro", "category": "El cine, las series y el entretenimiento", "level": 3, "translation": "play", "type": "Sustantivo"}, {"word": "el musical", "category": "El cine, las series y el entretenimiento", "level": 3, "translation": "musical", "type": "Sustantivo"}, {"word": "el escritor / la escritora", "category": "El cine, las series y el entretenimiento", "level": 3, "translation": "writer", "type": "Sustantivo"}, {"word": "el guion", "category": "El cine, las series y el entretenimiento", "level": 3, "translation": "script", "type": "Sustantivo"}, {"word": "el idioma", "category": "Otras palabras", "level": 1, "translation": "language", "type": "Sustantivo"}, {"word": "la carta", "category": "Otras palabras", "level": 1, "translation": "letter", "type": "Sustantivo"}, {"word": "el correo electrónico", "category": "Otras palabras", "level": 1, "translation": "email", "type": "Sustantivo"}, {"word": "la nota", "category": "Otras palabras", "level": 1, "translation": "grade/note", "type": "Sustantivo"}, {"word": "el lugar", "category": "Otras palabras", "level": 1, "translation": "place", "type": "Sustantivo"}, {"word": "el momento", "category": "Otras palabras", "level": 1, "translation": "moment", "type": "Sustantivo"}, {"word": "la zona", "category": "Otras palabras", "level": 2, "translation": "area/zone", "type": "Sustantivo"}, {"word": "el ego", "category": "Otras palabras", "level": 2, "translation": "ego", "type": "Sustantivo"}, {"word": "la creatividad", "category": "Otras palabras", "level": 2, "translation": "creativity", "type": "Sustantivo"}, {"word": "el medioambiente", "category": "Otras palabras", "level": 2, "translation": "environment", "type": "Sustantivo"}, {"word": "la discoteca", "category": "Otras palabras", "level": 2, "translation": "nightclub", "type": "Sustantivo"}, {"word": "el propósito", "category": "Otras palabras", "level": 2, "translation": "purpose", "type": "Sustantivo"}, {"word": "el tesoro", "category": "Otras palabras", "level": 2, "translation": "treasure", "type": "Sustantivo"}, {"word": "el prestigio", "category": "Otras palabras", "level": 2, "translation": "prestige", "type": "Sustantivo"}, {"word": "la novela", "category": "Otras palabras", "level": 2, "translation": "novel", "type": "Sustantivo"}, {"word": "la técnica", "category": "Otras palabras", "level": 2, "translation": "technique", "type": "Sustantivo"}, {"word": "la tendencia", "category": "Otras palabras", "level": 3, "translation": "tendency", "type": "Sustantivo"}, {"word": "las carreteras", "category": "Otras palabras", "level": 3, "translation": "highways", "type": "Sustantivo"}, {"word": "la honestidad", "category": "Otras palabras", "level": 3, "translation": "honesty", "type": "Sustantivo"}, {"word": "el esquema", "category": "Otras palabras", "level": 3, "translation": "scheme", "type": "Sustantivo"}, {"word": "el matiz", "category": "Otras palabras", "level": 3, "translation": "nuance", "type": "Sustantivo"}, {"word": "la sensación", "category": "Otras palabras", "level": 3, "translation": "sensation", "type": "Sustantivo"}, {"word": "la unidad", "category": "Otras palabras", "level": 3, "translation": "unity", "type": "Sustantivo"}, {"word": "la estampida", "category": "Otras palabras", "level": 3, "translation": "stampede", "type": "Sustantivo"}, {"word": "el establo", "category": "Otras palabras", "level": 3, "translation": "stable", "type": "Sustantivo"}, {"word": "el granjero", "category": "Otras palabras", "level": 3, "translation": "farmer", "type": "Sustantivo"}];
+
+const TYPES = ["Sustantivo", "Verbo", "Adjetivo", "Expresión"];
+const CATEGORIES = [...new Set(VOCAB.filter(w => w.type === "Sustantivo").map(w => w.category))].sort();
+const DURATIONS = [60, 120, 300];
+
+const CATEGORY_EN = {
+  "La tecnología y las redes sociales": "Technology and social media",
+  "La comida y la cocina": "Food and cooking",
+  "El cuerpo y la salud": "Body and health",
+  "Los viajes y la naturaleza": "Travel and nature",
+  "Las emociones y las relaciones": "Emotions and relationships",
+  "La familia y las generaciones": "Family and generations",
+  "El trabajo y el estudio": "Work and study",
+  "El comportamiento social": "Social behavior",
+  "Los saludos y la cultura": "Greetings and culture",
+  "La casa y los objetos": "House and objects",
+  "El cine, las series y el entretenimiento": "Movies, TV and entertainment",
+  "Otras palabras": "Other words",
+};
+
+const UI = {
+  es: {
+    appTitle: "Describe y adivina",
+    modeGame: "Juego",
+    modeReview: "Repaso",
+    wordsCount: n => `${n} palabra${n === 1 ? "" : "s"}`,
+    howToUse: "Cómo usar la app",
+    helpGame: "Juego",
+    helpReview: "Repaso",
+    helpP2rest: " aparece una palabra y una persona la explica en español sin decirla. La otra persona intenta adivinarla. La adivinó pasa a una palabra nueva y Pasar salta a la siguiente. Se puede jugar con un límite de tiempo o sin tiempo.",
+    helpP3rest: " aparece una palabra al azar. Al tocar la tarjeta se ve la traducción, y el ícono i muestra la categoría y el nivel.",
+    helpP4: "En los dos modos puedes filtrar las palabras por nivel, tipo de palabra y categoría.",
+    vocabulary: "Vocabulario",
+    levelBasic: "básico",
+    levelIntermediate: "intermedio",
+    levelAdvanced: "avanzado",
+    chooseLevel: "Elige al menos un nivel.",
+    wordType: "Tipo de palabra",
+    all: "todas",
+    none: "ninguna",
+    chooseType: "Elige al menos un tipo de palabra.",
+    nounCategories: "Categorías de sustantivos",
+    chooseCategory: 'Elige al menos una categoría (o desactiva "Sustantivo" en tipo de palabra).',
+    tapToTranslate: "toca la tarjeta para traducir",
+    showCategory: "Mostrar categoría",
+    selectAtLeastOne: "Selecciona al menos una categoría",
+    nextWord: "Siguiente palabra",
+    duration: "Duración",
+    noTimeLimit: "Sin tiempo",
+    min: n => `${n} min`,
+    startGame: "Empezar partida",
+    selectAtLeastOneFilter: "Selecciona al menos una categoría o tipo de palabra.",
+    guessed: "Adivinadas",
+    passed: "Pasadas",
+    end: "terminar",
+    yourWord: "Tu palabra",
+    explain: "Explícala sin decir la palabra.",
+    theyGuessedIt: "La adivinó",
+    pass: "Pasar",
+    noWordsFiltered: "No hay palabras con estos filtros.",
+    endEarly: "terminar antes",
+    timeUp: "Tiempo",
+    gameOver: "Partida terminada",
+    guessedLower: "adivinadas",
+    passedLower: "pasadas",
+    playAgain: "Jugar otra vez",
+    typeNoun: "Sustantivo",
+    typeVerb: "Verbo",
+    typeAdjective: "Adjetivo",
+    typeExpression: "Expresión",
+  },
+  en: {
+    appTitle: "Describe and Guess",
+    modeGame: "Game",
+    modeReview: "Review",
+    wordsCount: n => `${n} word${n === 1 ? "" : "s"}`,
+    howToUse: "How to use the app",
+    helpGame: "Game",
+    helpReview: "Review",
+    helpP2rest: " a word appears and one person explains it in Spanish without saying it. The other person tries to guess it. \u201cThey guessed it\u201d moves to a new word and \u201cPass\u201d skips to the next one. You can play with a time limit or without one.",
+    helpP3rest: " a random word appears. Tap the card to see the translation, and the i icon shows the category and level.",
+    helpP4: "In both modes you can filter words by level, word type and category.",
+    vocabulary: "Vocabulary",
+    levelBasic: "basic",
+    levelIntermediate: "intermediate",
+    levelAdvanced: "advanced",
+    chooseLevel: "Choose at least one level.",
+    wordType: "Word type",
+    all: "all",
+    none: "none",
+    chooseType: "Choose at least one word type.",
+    nounCategories: "Noun categories",
+    chooseCategory: 'Choose at least one category (or turn off "Noun" in word type).',
+    tapToTranslate: "tap the card to translate",
+    showCategory: "Show category",
+    selectAtLeastOne: "Select at least one category",
+    nextWord: "Next word",
+    duration: "Duration",
+    noTimeLimit: "No time limit",
+    min: n => `${n} min`,
+    startGame: "Start game",
+    selectAtLeastOneFilter: "Select at least one category or word type.",
+    guessed: "Guessed",
+    passed: "Passed",
+    end: "end",
+    yourWord: "Your word",
+    explain: "Explain it without saying the word.",
+    theyGuessedIt: "They guessed it",
+    pass: "Pass",
+    noWordsFiltered: "No words match these filters.",
+    endEarly: "end early",
+    timeUp: "Time's up",
+    gameOver: "Game over",
+    guessedLower: "guessed",
+    passedLower: "passed",
+    playAgain: "Play again",
+    typeNoun: "Noun",
+    typeVerb: "Verb",
+    typeAdjective: "Adjective",
+    typeExpression: "Expression",
+  },
+};
+
+function categoryLabel(cat, lang) {
+  return lang === "en" ? (CATEGORY_EN[cat] || cat) : cat;
+}
+function typeLabel(type, t) {
+  if (type === "Sustantivo") return t.typeNoun;
+  if (type === "Verbo") return t.typeVerb;
+  if (type === "Adjetivo") return t.typeAdjective;
+  if (type === "Expresión") return t.typeExpression;
+  return type;
+}
+function levelLabelFn(level, t) {
+  if (level === 1) return t.levelBasic;
+  if (level === 2) return t.levelIntermediate;
+  return t.levelAdvanced;
+}
+function pickRandom(pool, exclude) {
+  if (pool.length === 0) return null;
+  if (pool.length === 1) return pool[0];
+  let choice;
+  do { choice = pool[Math.floor(Math.random() * pool.length)]; } while (choice.word === exclude);
+  return choice;
+}
+function formatTime(seconds) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+/* ---------------- state ---------------- */
+let lang = "es";
+let selectedTypes = new Set(["Sustantivo"]);
+let selectedCats = new Set(CATEGORIES);
+let levels = new Set([1, 2, 3]);
+let showFilters = false;
+let showHelp = false;
+let mode = "juego"; // "repaso" | "juego"
+
+// Repaso state
+let repasoCurrent = null;
+let repasoFlipped = false;
+let repasoShowCategory = false;
+
+// Juego state
+let gameStage = "setup"; // setup | playing | finished
+let gameDuration = null;
+let gameTimeLeft = null;
+let gameCurrent = null;
+let gameGuessed = 0;
+let gamePassed = 0;
+let gameIntervalId = null;
+
+function t() { return UI[lang]; }
+
+function getPool() {
+  return VOCAB.filter(w =>
+    levels.has(w.level) &&
+    selectedTypes.has(w.type) &&
+    (w.type !== "Sustantivo" || selectedCats.has(w.category))
+  );
+}
+
+/* ---------------- render: header ---------------- */
+function renderHeader() {
+  document.getElementById('appTitle').textContent = t().appTitle;
+  document.getElementById('poolCount').textContent = t().wordsCount(getPool().length);
+  document.getElementById('modeGameBtn').textContent = t().modeGame;
+  document.getElementById('modeReviewBtn').textContent = t().modeReview;
+  document.getElementById('modeGameBtn').classList.toggle('active', mode === 'juego');
+  document.getElementById('modeReviewBtn').classList.toggle('active', mode === 'repaso');
+
+  document.getElementById('langEn').classList.toggle('active', lang === 'en');
+  document.getElementById('langEs').classList.toggle('active', lang === 'es');
+  const checked = lang === 'es';
+  document.getElementById('switchTrack').classList.toggle('checked', checked);
+  document.getElementById('switchKnob').classList.toggle('checked', checked);
+}
+
+document.getElementById('modeGameBtn').onclick = () => { mode = 'juego'; renderAll(); };
+document.getElementById('modeReviewBtn').onclick = () => { mode = 'repaso'; renderAll(); };
+document.getElementById('langEn').onclick = () => { lang = 'en'; renderAll(); };
+document.getElementById('langEs').onclick = () => { lang = 'es'; renderAll(); };
+document.getElementById('langSwitchBtn').onclick = () => { lang = (lang === 'es' ? 'en' : 'es'); renderAll(); };
+
+/* ---------------- render: help ---------------- */
+function renderHelp() {
+  document.getElementById('helpToggleLabel').textContent = t().howToUse;
+  document.getElementById('helpChevron').classList.toggle('open', showHelp);
+  document.getElementById('helpPanel').classList.toggle('open', showHelp);
+  document.getElementById('helpGameLabel').textContent = t().helpGame + ':';
+  document.getElementById('helpReviewLabel').textContent = t().helpReview + ':';
+  document.getElementById('helpP2rest').textContent = t().helpP2rest;
+  document.getElementById('helpP3rest').textContent = t().helpP3rest;
+  document.getElementById('helpP4').textContent = t().helpP4;
+}
+document.getElementById('helpToggle').onclick = () => { showHelp = !showHelp; renderHelp(); };
+
+/* ---------------- render: vocabulary levels ---------------- */
+function renderLevels() {
+  document.getElementById('vocabLabel').textContent = t().vocabulary;
+  const row = document.getElementById('levelRow');
+  row.innerHTML = '';
+  [[1, t().levelBasic], [2, t().levelIntermediate], [3, t().levelAdvanced]].forEach(([lvl, label]) => {
+    const btn = document.createElement('button');
+    btn.className = 'level-btn' + (levels.has(lvl) ? ' active' : '');
+    btn.textContent = label;
+    btn.onclick = () => {
+      if (levels.has(lvl)) levels.delete(lvl); else levels.add(lvl);
+      renderAll();
+    };
+    row.appendChild(btn);
+  });
+  const warn = document.getElementById('levelWarn');
+  warn.textContent = t().chooseLevel;
+  warn.style.display = levels.size === 0 ? 'block' : 'none';
+}
+
+/* ---------------- render: type filter ---------------- */
+function renderTypes() {
+  document.getElementById('typeLabel').textContent = t().wordType;
+  const allSel = selectedTypes.size === TYPES.length;
+  document.getElementById('toggleAllTypes').textContent = allSel ? t().none : t().all;
+  document.getElementById('toggleAllTypes').onclick = () => {
+    selectedTypes = allSel ? new Set() : new Set(TYPES);
+    renderAll();
+  };
+  const row = document.getElementById('typeRow');
+  row.innerHTML = '';
+  TYPES.forEach(ty => {
+    const btn = document.createElement('button');
+    btn.className = 'type-btn' + (selectedTypes.has(ty) ? ' active' : '');
+    btn.textContent = typeLabel(ty, t());
+    btn.onclick = () => {
+      if (selectedTypes.has(ty)) selectedTypes.delete(ty); else selectedTypes.add(ty);
+      renderAll();
+    };
+    row.appendChild(btn);
+  });
+  const warn = document.getElementById('typeWarn');
+  warn.textContent = t().chooseType;
+  warn.style.display = selectedTypes.size === 0 ? 'block' : 'none';
+}
+
+/* ---------------- render: categories dropdown ---------------- */
+function renderCategories() {
+  document.getElementById('filtersToggleLabel').textContent = t().nounCategories;
+  document.getElementById('catSectionLabel').textContent = t().nounCategories;
+  document.getElementById('filtersChevron').classList.toggle('open', showFilters);
+  document.getElementById('filtersPanel').classList.toggle('open', showFilters);
+
+  const allSel = selectedCats.size === CATEGORIES.length;
+  document.getElementById('toggleAllCats').textContent = allSel ? t().none : t().all;
+  document.getElementById('toggleAllCats').onclick = () => {
+    selectedCats = allSel ? new Set() : new Set(CATEGORIES);
+    renderAll();
+  };
+
+  const list = document.getElementById('catList');
+  list.innerHTML = '';
+  CATEGORIES.forEach(cat => {
+    const active = selectedCats.has(cat);
+    const item = document.createElement('label');
+    item.className = 'cat-item' + (active ? ' active' : '');
+    item.innerHTML = '<span class="box"><span class="check">&#10003;</span></span><span class="cat-label">' + categoryLabel(cat, lang) + '</span>';
+    item.onclick = () => {
+      if (selectedCats.has(cat)) selectedCats.delete(cat); else selectedCats.add(cat);
+      renderAll();
+    };
+    list.appendChild(item);
+  });
+
+  const warn = document.getElementById('catWarn');
+  warn.textContent = t().chooseCategory;
+  warn.style.display = selectedCats.size === 0 ? 'block' : 'none';
+}
+document.getElementById('filtersToggle').onclick = () => { showFilters = !showFilters; renderCategories(); };
+
+/* ---------------- Repaso ---------------- */
+function renderRepaso() {
+  const pool = getPool();
+  if (!repasoCurrent || !pool.some(w => w.word === repasoCurrent.word)) {
+    repasoCurrent = pickRandom(pool, null);
+    repasoFlipped = false;
+    repasoShowCategory = false;
+  }
+
+  const area = document.getElementById('modeArea');
+  const cur = repasoCurrent;
+
+  if (!cur) {
+    area.innerHTML = '<div class="empty-state">' + t().selectAtLeastOne + '</div>' +
+      '<button class="primary-btn" disabled>' + t().nextWord + '</button>';
+    return;
+  }
+
+  const subHtml = repasoShowCategory
+    ? '<span class="cat-text">' + (cur.type === 'Sustantivo' ? categoryLabel(cur.category, lang) : typeLabel(cur.type, t())) + '</span>'
+    : '<span class="hint">' + t().tapToTranslate + '</span>';
+
+  area.innerHTML = `
+    <div class="card-outer" id="cardOuter">
+      <div class="card-inner${repasoFlipped ? ' flipped' : ''}" id="cardInner">
+        <div class="card-face">
+          <div class="word-row">
+            <span class="word">${cur.word}</span>
+            <button class="info-btn${repasoShowCategory ? ' active' : ''}" id="infoBtn" aria-label="${t().showCategory}">i</button>
+          </div>
+          <div class="card-sub">${subHtml}</div>
+        </div>
+        <div class="card-face card-back">
+          <span class="translation">${cur.translation}</span>
+        </div>
+      </div>
+    </div>
+    <button class="primary-btn" id="nextWordBtn">${t().nextWord}</button>
+  `;
+
+  document.getElementById('cardOuter').onclick = () => {
+    repasoFlipped = !repasoFlipped;
+    renderRepaso();
+  };
+  document.getElementById('infoBtn').onclick = (e) => {
+    e.stopPropagation();
+    repasoShowCategory = !repasoShowCategory;
+    renderRepaso();
+  };
+  document.getElementById('nextWordBtn').onclick = () => {
+    repasoFlipped = false;
+    repasoShowCategory = false;
+    repasoCurrent = pickRandom(pool, repasoCurrent ? repasoCurrent.word : null);
+    renderRepaso();
+  };
+}
+
+/* ---------------- Juego ---------------- */
+function clearGameTimer() {
+  if (gameIntervalId) { clearInterval(gameIntervalId); gameIntervalId = null; }
+}
+
+function startGame() {
+  const pool = getPool();
+  gameGuessed = 0;
+  gamePassed = 0;
+  gameCurrent = pickRandom(pool, null);
+  if (gameDuration) {
+    gameTimeLeft = gameDuration;
+    gameIntervalId = setInterval(() => {
+      gameTimeLeft = gameTimeLeft > 0 ? gameTimeLeft - 1 : 0;
+      if (gameTimeLeft === 0) {
+        clearGameTimer();
+        gameStage = 'finished';
+      }
+      renderJuego();
+    }, 1000);
+  } else {
+    gameTimeLeft = null;
+  }
+  gameStage = 'playing';
+  renderJuego();
+}
+
+function endGame() {
+  clearGameTimer();
+  gameStage = 'finished';
+  renderJuego();
+}
+
+function gameNextWord() {
+  const pool = getPool();
+  gameCurrent = pickRandom(pool, gameCurrent ? gameCurrent.word : null);
+}
+
+function renderJuego() {
+  const area = document.getElementById('modeArea');
+  const pool = getPool();
+
+  if (gameStage === 'setup') {
+    area.innerHTML = `
+      <div style="margin-top:32px;margin-bottom:8px;">
+        <div class="duration-label">${t().duration}</div>
+        <div class="duration-row" id="durationRow"></div>
+        <button class="primary-btn" id="startGameBtn" ${pool.length === 0 ? 'disabled' : ''}>${t().startGame}</button>
+        <p class="warn" id="setupWarn" style="display:${pool.length === 0 ? 'block' : 'none'};">${t().selectAtLeastOneFilter}</p>
+      </div>
+    `;
+    const row = document.getElementById('durationRow');
+    [null, ...DURATIONS].forEach(d => {
+      const btn = document.createElement('button');
+      btn.className = 'duration-btn' + (gameDuration === d ? ' active' : '');
+      btn.textContent = d === null ? t().noTimeLimit : t().min(d / 60);
+      btn.onclick = () => { gameDuration = d; renderJuego(); };
+      row.appendChild(btn);
+    });
+    document.getElementById('startGameBtn').onclick = startGame;
+    return;
+  }
+
+  if (gameStage === 'finished') {
+    area.innerHTML = `
+      <div class="finished-block">
+        <div class="finished-label">${gameDuration ? t().timeUp : t().gameOver}</div>
+        <div class="finished-stats">
+          <div>
+            <div class="finished-stat-num">${gameGuessed}</div>
+            <div class="finished-stat-label">${t().guessedLower}</div>
+          </div>
+          <div>
+            <div class="finished-stat-num">${gamePassed}</div>
+            <div class="finished-stat-label">${t().passedLower}</div>
+          </div>
+        </div>
+        <button class="primary-btn" id="playAgainBtn">${t().playAgain}</button>
+      </div>
+    `;
+    document.getElementById('playAgainBtn').onclick = () => { gameStage = 'setup'; renderJuego(); };
+    return;
+  }
+
+  // playing
+  const wordBlock = gameCurrent ? `
+    <div class="game-word-block">
+      <div class="game-word-label">${t().yourWord}</div>
+      <div class="game-word">${gameCurrent.word}</div>
+      <div class="game-word-meta">
+        <span class="cat-text">${gameCurrent.type === 'Sustantivo' ? categoryLabel(gameCurrent.category, lang) : typeLabel(gameCurrent.type, t())}</span>
+        &nbsp;&middot;&nbsp;${levelLabelFn(gameCurrent.level, t())}
+      </div>
+      <div class="game-explain">${t().explain}</div>
+    </div>
+  ` : `<div class="game-word-block" style="font-size:14px;color:#9B9B9B;">${t().noWordsFiltered}</div>`;
+
+  area.innerHTML = `
+    <div style="margin-top:24px;margin-bottom:8px;">
+      <div class="game-topbar">
+        <span>${t().guessed}: <strong>${gameGuessed}</strong>&nbsp;&nbsp;&middot;&nbsp;&nbsp;${t().passed}: <strong>${gamePassed}</strong></span>
+        ${gameDuration
+          ? `<span class="timer">${formatTime(gameTimeLeft)}</span>`
+          : `<button class="link-btn" id="endGameBtn">${t().end}</button>`}
+      </div>
+      ${wordBlock}
+      <div class="game-actions">
+        <button class="btn-guessed" id="guessedBtn" ${!gameCurrent ? 'disabled' : ''}>${t().theyGuessedIt}</button>
+        <button class="btn-pass" id="passBtn" ${!gameCurrent ? 'disabled' : ''}>${t().pass}</button>
+      </div>
+      ${gameDuration ? `<button class="end-early" id="endEarlyBtn">${t().endEarly}</button>` : ''}
+    </div>
+  `;
+
+  if (!gameDuration) {
+    document.getElementById('endGameBtn').onclick = endGame;
+  } else {
+    document.getElementById('endEarlyBtn').onclick = endGame;
+  }
+  document.getElementById('guessedBtn').onclick = () => { gameGuessed++; gameNextWord(); renderJuego(); };
+  document.getElementById('passBtn').onclick = () => { gamePassed++; gameNextWord(); renderJuego(); };
+}
+
+/* ---------------- master render ---------------- */
+function renderAll() {
+  renderHeader();
+  renderHelp();
+  if (mode === 'repaso') {
+    renderRepaso();
+  } else {
+    renderJuego();
+  }
+  renderLevels();
+  renderTypes();
+  renderCategories();
+}
+
+renderAll();
+</script>
+</body>
+</html>
