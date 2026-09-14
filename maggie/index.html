@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Describe y adivina</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #FFFFFF;
+    color: #1A1A1A;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+  }
+  .wrap { width: 100%; max-width: 420px; padding: 0 20px 40px; }
+
+  /* Header */
+  .header { padding: 28px 0 16px; border-bottom: 1px solid #EDEDED; }
+  .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; gap: 12px; }
+  .title { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+  .header-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .count { font-size: 12px; color: #9B9B9B; }
+
+  .lang-switch { display: flex; align-items: center; gap: 6px; }
+  .lang-label { font-size: 11px; font-weight: 600; color: #8A8A8A; cursor: pointer; }
+  .lang-label.active { color: #1A1A1A; }
+  .switch { position: relative; width: 34px; height: 19px; flex-shrink: 0; cursor: pointer; display: inline-block; }
+  .switch-track { position: absolute; inset: 0; background: #E4E4E4; border-radius: 19px; transition: background 0.15s ease; }
+  .switch-track.checked { background: #1A1A1A; }
+  .switch-knob { position: absolute; width: 14px; height: 14px; left: 2.5px; top: 2.5px; background: #FFFFFF; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,0.25); transition: left 0.15s ease; }
+  .switch-knob.checked { left: 17.5px; }
+
+  .mode-row { display: flex; gap: 4px; }
+  .mode-btn {
+    flex: 1; padding: 9px 0; font-size: 13px; font-weight: 500; font-family: inherit;
+    border: none; border-bottom: 2px solid #EDEDED; background: none; color: #9B9B9B; cursor: pointer;
+  }
+  .mode-btn.active { border-bottom: 2px solid #1A1A1A; color: #1A1A1A; }
+
+  /* Help */
+  .help-toggle {
+    width: 100%; margin-top: 12px; padding: 8px 0; font-size: 12px; font-family: inherit;
+    background: none; border: none; color: #9B9B9B; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .help-toggle .chevron { display: inline-block; font-size: 10px; transition: transform 0.15s ease; }
+  .help-toggle .chevron.open { transform: rotate(180deg); }
+  .help-panel {
+    margin-top: 4px; margin-bottom: 8px; padding: 16px; background: #FAFAFA;
+    border: 1px solid #EDEDED; border-radius: 8px; font-size: 13px; line-height: 1.6; color: #4A4A4A;
+    display: none;
+  }
+  .help-panel.open { display: block; }
+  .help-panel p { margin: 0 0 10px; }
+  .help-panel p:last-child { margin-bottom: 0; }
+
+  /* Repaso flip card */
+  .card-outer { margin-top: 40px; margin-bottom: 32px; perspective: 1400px; cursor: pointer; }
+  .card-inner {
+    position: relative; min-height: 160px;
+    transition: transform 0.5s cubic-bezier(.45,.1,.15,1);
+    transform-style: preserve-3d;
+  }
+  .card-inner.flipped { transform: rotateY(180deg); }
+  .card-face {
+    position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+  }
+  .card-back { transform: rotateY(180deg); }
+  .word-row { display: inline-flex; align-items: center; gap: 8px; }
+  .word { font-size: 36px; font-weight: 500; letter-spacing: -0.01em; line-height: 1.25; word-break: break-word; }
+  .info-btn {
+    width: 20px; height: 20px; flex-shrink: 0; border-radius: 50%; border: 1px solid #C9C9C9;
+    background: #FFFFFF; color: #9B9B9B; font-size: 11px; font-style: italic; font-family: Georgia, serif;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
+    line-height: 1; align-self: flex-start; margin-top: 2px;
+  }
+  .info-btn.active { background: #F1ECFB; color: #6B4FC4; border-color: #B9A3EA; }
+  .card-sub { margin-top: 14px; min-height: 18px; }
+  .card-sub .cat-text { font-size: 12px; color: #9B9B9B; text-transform: lowercase; }
+  .card-sub .hint { font-size: 12px; color: #C9C9C9; }
+  .translation { font-size: 30px; font-weight: 500; letter-spacing: -0.01em; color: #7C5CBF; word-break: break-word; }
+  .empty-state { min-height: 160px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #9B9B9B; }
+
+  .primary-btn {
+    width: 100%; padding: 13px; font-size: 14px; font-weight: 500; font-family: inherit;
+    border: 1px solid #1A1A1A; border-radius: 6px; background: #1A1A1A; color: #FFFFFF; cursor: pointer;
+  }
+  .primary-btn:disabled { background: #F5F5F5; color: #B5B5B5; border-color: #EDEDED; cursor: default; }
+
+  /* Juego */
+  .duration-label { font-size: 12px; color: #9B9B9B; margin-bottom: 10px; }
+  .duration-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
+  .duration-btn {
+    flex: 1 1 auto; min-width: 80px; padding: 9px 0; font-size: 13px; font-family: inherit;
+    border: 1px solid #E5E5E5; border-radius: 6px; background: #FFFFFF; color: #9B9B9B; cursor: pointer;
+  }
+  .duration-btn.active { border: 1px solid #B9A3EA; background: #F1ECFB; color: #6B4FC4; }
+  .warn { margin-top: 10px; font-size: 12px; color: #B5533C; }
+
+  .game-topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; font-size: 12px; color: #9B9B9B; }
+  .game-topbar strong { color: #1A1A1A; }
+  .link-btn { background: none; border: none; color: #9B9B9B; font-size: 12px; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; padding: 0; font-family: inherit; }
+  .timer { font-variant-numeric: tabular-nums; }
+
+  .game-word-block { text-align: center; margin-bottom: 28px; }
+  .game-word-label { font-size: 12px; color: #9B9B9B; margin-bottom: 10px; }
+  .game-word { font-size: 34px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.2; word-break: break-word; text-transform: uppercase; margin-bottom: 10px; }
+  .game-word-meta { font-size: 12px; color: #C9C9C9; margin-bottom: 16px; }
+  .game-word-meta .cat-text { text-transform: lowercase; }
+  .game-explain { font-size: 14px; color: #6B6B6B; }
+
+  .game-actions { display: flex; flex-direction: column; gap: 8px; }
+  .btn-guessed { width: 100%; padding: 15px; font-size: 15px; font-weight: 600; font-family: inherit; border: 1px solid #1A1A1A; border-radius: 6px; background: #1A1A1A; color: #FFFFFF; cursor: pointer; }
+  .btn-guessed:disabled { background: #F5F5F5; color: #B5B5B5; cursor: default; }
+  .btn-pass { width: 100%; padding: 12px; font-size: 14px; font-weight: 500; font-family: inherit; border: 1px solid #E5E5E5; border-radius: 6px; background: #FFFFFF; color: #6B6B6B; cursor: pointer; }
+  .end-early { width: 100%; margin-top: 14px; padding: 8px 0; font-size: 12px; font-family: inherit; background: none; border: none; color: #C9C9C9; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+
+  .finished-block { margin-top: 40px; margin-bottom: 24px; text-align: center; }
+  .finished-label { font-size: 13px; color: #9B9B9B; margin-bottom: 18px; }
+  .finished-stats { display: flex; justify-content: center; gap: 32px; margin-bottom: 32px; }
+  .finished-stat-num { font-size: 28px; font-weight: 600; }
+  .finished-stat-label { font-size: 12px; color: #9B9B9B; }
+
+  /* Vocabulario / tipo de palabra */
+  .section { margin-top: 28px; }
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .section-label { font-size: 12px; color: #9B9B9B; }
+  .toggle-all { background: none; border: none; color: #1A1A1A; font-size: 12px; font-family: inherit; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; padding: 0; }
+  .pill-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .level-btn { flex: 1; padding: 9px 0; font-size: 13px; font-family: inherit; border: 1px solid #E5E5E5; border-radius: 6px; background: #FFFFFF; color: #9B9B9B; cursor: pointer; }
+  .level-btn.active { border: 1px solid #B9A3EA; background: #F1ECFB; color: #6B4FC4; }
+  .type-btn { padding: 7px 12px; font-size: 13px; font-family: inherit; border: 1px solid #E5E5E5; border-radius: 6px; background: #FFFFFF; color: #9B9B9B; cursor: pointer; }
+  .type-btn.active { border: 1px solid #B9A3EA; background: #F1ECFB; color: #6B4FC4; }
+
+  /* Categorías desplegable */
+  .filters-toggle {
+    width: 100%; margin-top: 10px; padding: 12px 0; font-size: 13px; font-family: inherit;
+    background: none; border: none; color: #6B6B6B; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .filters-toggle .chevron { display: inline-block; font-size: 10px; transition: transform 0.15s ease; }
+  .filters-toggle .chevron.open { transform: rotate(180deg); }
+  .filters-panel { margin-top: 8px; border-top: 1px solid #EDEDED; padding-top: 20px; display: none; }
+  .filters-panel.open { display: block; }
+  .cat-list { display: flex; flex-direction: column; }
+  .cat-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; font-size: 14px; color: #9B9B9B; cursor: pointer; border-bottom: 1px solid #F5F5F5; }
+  .cat-item.active { color: #1A1A1A; }
+  .cat-item .box { width: 14px; height: 14px; flex-shrink: 0; border-radius: 3px; border: 1px solid #D5D5D5; display: flex; align-items: center; justify-content: center; }
+  .cat-item.active .box { border: 1px solid #B9A3EA; background: #F1ECFB; }
+  .cat-item .box .check { font-size: 10px; color: #6B4FC4; line-height: 1; display: none; }
+  .cat-item.active .box .check { display: inline; }
+  .cat-item .cat-label { text-transform: lowercase; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div class="header-top">
+      <span class="title" id="appTitle"></span>
+      <div class="header-right">
+        <span class="count" id="poolCount"></span>
+        <div class="lang-switch">
+          <span class="lang-label" id="langEn">EN</span>
+          <span class="switch" id="langSwitchBtn">
+            <span class="switch-track" id="switchTrack"></span>
+            <span class="switch-knob" id="switchKnob"></span>
+          </span>
+          <span class="lang-label" id="langEs">SP</span>
+        </div>
+      </div>
+    </div>
+    <div class="mode-row">
+      <button class="mode-btn" id="modeGameBtn"></button>
+      <button class="mode-btn" id="modeReviewBtn"></button>
+    </div>
+  </div>
+
+  <button class="help-toggle" id="helpToggle">
+    <span id="helpToggleLabel"></span>
+    <span class="chevron" id="helpChevron">&#9662;</span>
+  </button>
+  <div class="help-panel" id="helpPanel">
+    <p><strong id="helpGameLabel"></strong><span id="helpP2rest"></span></p>
+    <p><strong id="helpReviewLabel"></strong><span id="helpP3rest"></span></p>
+    <p id="helpP4"></p>
+  </div>
+
+  <div id="modeArea"></div>
+
+  <div class="section">
+    <div class="section-label" id="vocabLabel"></div>
+    <div class="pill-row" id="levelRow"></div>
+    <div class="warn" id="levelWarn" style="display:none;"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <span class="section-label" id="typeLabel"></span>
+      <button class="toggle-all" id="toggleAllTypes"></button>
+    </div>
+    <div class="pill-row" id="typeRow"></div>
+    <div class="warn" id="typeWarn" style="display:none;"></div>
+  </div>
+
+  <button class="filters-toggle" id="filtersToggle">
+    <span id="filtersToggleLabel"></span>
+    <span class="chevron" id="filtersChevron">&#9662;</span>
+  </button>
+  <div class="filters-panel" id="filtersPanel">
+    <div class="section-header" style="margin-bottom:14px;">
+      <span class="section-label" id="catSectionLabel"></span>
+      <button class="toggle-all" id="toggleAllCats"></button>
+    </div>
+    <div class="cat-list" id="catList"></div>
+    <div class="warn" id="catWarn" style="display:none;"></div>
+  </div>
+
+</div>
+
+<script>
+const VOCAB = [{"word": "llover", "category": "Verbos", "level": 1, "translation": "to rain", "type": "Verbo"}, {"word": "mostrar", "category": "Verbos", "level": 1, "translation": "to show", "type": "Verbo"}, {"word": "oír", "category": "Verbos", "level": 1, "translation": "to hear", "type": "Verbo"}, {"word": "mejorar", "category": "Verbos", "level": 1, "translation": "to improve", "type": "Verbo"}, {"word": "significar", "category": "Verbos", "level": 1, "translation": "to mean", "type": "Verbo"}, {"word": "mover", "category": "Verbos", "level": 1, "translation": "to move", "type": "Verbo"}, {"word": "extrañar", "category": "Verbos", "level": 1, "translation": "to miss", "type": "Verbo"}, {"word": "disfrutar", "category": "Verbos", "level": 1, "translation": "to enjoy", "type": "Verbo"}, {"word": "revisar", "category": "Verbos", "level": 1, "translation": "to review", "type": "Verbo"}, {"word": "llenar", "category": "Verbos", "level": 1, "translation": "to fill", "type": "Verbo"}, {"word": "alquilar", "category": "Verbos", "level": 1, "translation": "to rent", "type": "Verbo"}, {"word": "contar", "category": "Verbos", "level": 1, "translation": "to count/tell", "type": "Verbo"}, {"word": "regar", "category": "Verbos", "level": 2, "translation": "to water (plants)", "type": "Verbo"}, {"word": "cosechar", "category": "Verbos", "level": 2, "translation": "to harvest", "type": "Verbo"}, {"word": "doblar", "category": "Verbos", "level": 2, "translation": "to fold", "type": "Verbo"}, {"word": "despedir", "category": "Verbos", "level": 2, "translation": "to fire (someone)", "type": "Verbo"}, {"word": "equivocarse", "category": "Verbos", "level": 2, "translation": "to make a mistake", "type": "Verbo"}, {"word": "cometer", "category": "Verbos", "level": 2, "translation": "to commit/make (a mistake)", "type": "Verbo"}, {"word": "dedicarse a", "category": "Verbos", "level": 2, "translation": "to work in/do for a living", "type": "Verbo"}, {"word": "listo/a", "category": "Adjetivos generales", "level": 1, "translation": "ready", "type": "Adjetivo"}, {"word": "roto/a", "category": "Adjetivos generales", "level": 1, "translation": "broken", "type": "Adjetivo"}, {"word": "tranquilo/a", "category": "Adjetivos generales", "level": 1, "translation": "calm", "type": "Adjetivo"}, {"word": "húmedo/a", "category": "Adjetivos generales", "level": 1, "translation": "humid", "type": "Adjetivo"}, {"word": "lleno/a", "category": "Adjetivos generales", "level": 1, "translation": "full", "type": "Adjetivo"}, {"word": "abierto/a", "category": "Adjetivos generales", "level": 1, "translation": "open", "type": "Adjetivo"}, {"word": "equivocado/a", "category": "Adjetivos generales", "level": 2, "translation": "wrong", "type": "Adjetivo"}, {"word": "callado/a", "category": "Adjetivos generales", "level": 2, "translation": "quiet", "type": "Adjetivo"}, {"word": "silencioso/a", "category": "Adjetivos generales", "level": 2, "translation": "silent", "type": "Adjetivo"}, {"word": "duro/a", "category": "Adjetivos generales", "level": 2, "translation": "hard", "type": "Adjetivo"}, {"word": "eficiente", "category": "Adjetivos generales", "level": 2, "translation": "efficient", "type": "Adjetivo"}, {"word": "dañado/a", "category": "Adjetivos generales", "level": 2, "translation": "damaged", "type": "Adjetivo"}, {"word": "rígido/a", "category": "Adjetivos generales", "level": 3, "translation": "rigid/stiff", "type": "Adjetivo"}, {"word": "tupido/a", "category": "Adjetivos generales", "level": 3, "translation": "dense/full (flowers)", "type": "Adjetivo"}, {"word": "traumatizado/a", "category": "Adjetivos generales", "level": 3, "translation": "traumatized", "type": "Adjetivo"}, {"word": "a ver", "category": "Expresiones y frases hechas", "level": 1, "translation": "let's see", "type": "Expresión"}, {"word": "vaya", "category": "Expresiones y frases hechas", "level": 1, "translation": "oh!/wow", "type": "Expresión"}, {"word": "o sea", "category": "Expresiones y frases hechas", "level": 1, "translation": "that is/in other words", "type": "Expresión"}, {"word": "¿tienes preguntas?", "category": "Expresiones y frases hechas", "level": 1, "translation": "do you have questions?", "type": "Expresión"}, {"word": "¿qué piensas?", "category": "Expresiones y frases hechas", "level": 1, "translation": "what do you think?", "type": "Expresión"}, {"word": "¿cómo te sientes?", "category": "Expresiones y frases hechas", "level": 1, "translation": "how do you feel?", "type": "Expresión"}, {"word": "casi", "category": "Expresiones y frases hechas", "level": 1, "translation": "almost", "type": "Expresión"}, {"word": "a menudo", "category": "Expresiones y frases hechas", "level": 1, "translation": "often", "type": "Expresión"}, {"word": "a pie", "category": "Expresiones y frases hechas", "level": 1, "translation": "on foot", "type": "Expresión"}, {"word": "¿tiene sentido?", "category": "Expresiones y frases hechas", "level": 2, "translation": "does it make sense?", "type": "Expresión"}, {"word": "¿alguna vez…?", "category": "Expresiones y frases hechas", "level": 2, "translation": "have you ever...?", "type": "Expresión"}, {"word": "de hecho", "category": "Expresiones y frases hechas", "level": 2, "translation": "in fact", "type": "Expresión"}, {"word": "me alegro mucho", "category": "Expresiones y frases hechas", "level": 2, "translation": "I'm so glad", "type": "Expresión"}, {"word": "y listo", "category": "Expresiones y frases hechas", "level": 2, "translation": "and that's it", "type": "Expresión"}, {"word": "¿puedes hablar más despacio?", "category": "Expresiones y frases hechas", "level": 2, "translation": "can you speak more slowly?", "type": "Expresión"}, {"word": "¿qué significa…?", "category": "Expresiones y frases hechas", "level": 2, "translation": "what does ... mean?", "type": "Expresión"}, {"word": "hace + tiempo", "category": "Expresiones y frases hechas", "level": 2, "translation": "... ago", "type": "Expresión"}, {"word": "tal vez", "category": "Expresiones y frases hechas", "level": 2, "translation": "maybe", "type": "Expresión"}, {"word": "estar de acuerdo", "category": "Expresiones y frases hechas", "level": 2, "translation": "to agree", "type": "Expresión"}, {"word": "desde cuándo", "category": "Expresiones y frases hechas", "level": 2, "translation": "since when", "type": "Expresión"}, {"word": "en un rato", "category": "Expresiones y frases hechas", "level": 2, "translation": "in a bit", "type": "Expresión"}, {"word": "detrás de", "category": "Expresiones y frases hechas", "level": 2, "translation": "behind", "type": "Expresión"}, {"word": "dentro de", "category": "Expresiones y frases hechas", "level": 2, "translation": "inside", "type": "Expresión"}, {"word": "famoso por", "category": "Expresiones y frases hechas", "level": 2, "translation": "famous for", "type": "Expresión"}, {"word": "un placer/gusto conocerte", "category": "Expresiones y frases hechas", "level": 3, "translation": "a pleasure to meet you", "type": "Expresión"}, {"word": "la granja", "category": "La granja y el trabajo agrícola", "level": 1, "translation": "farm", "type": "Sustantivo"}, {"word": "la tierra", "category": "La granja y el trabajo agrícola", "level": 1, "translation": "soil/earth", "type": "Sustantivo"}, {"word": "la semilla", "category": "La granja y el trabajo agrícola", "level": 1, "translation": "seed", "type": "Sustantivo"}, {"word": "la herramienta", "category": "La granja y el trabajo agrícola", "level": 1, "translation": "tool", "type": "Sustantivo"}, {"word": "la vaca", "category": "La granja y el trabajo agrícola", "level": 1, "translation": "cow", "type": "Sustantivo"}, {"word": "el granero", "category": "La granja y el trabajo agrícola", "level": 2, "translation": "barn", "type": "Sustantivo"}, {"word": "el granjero/la granjera", "category": "La granja y el trabajo agrícola", "level": 2, "translation": "farmer", "type": "Sustantivo"}, {"word": "la charola", "category": "La granja y el trabajo agrícola", "level": 2, "translation": "tray", "type": "Sustantivo"}, {"word": "el tallo", "category": "La granja y el trabajo agrícola", "level": 2, "translation": "stem", "type": "Sustantivo"}, {"word": "la cubeta", "category": "La granja y el trabajo agrícola", "level": 2, "translation": "bucket", "type": "Sustantivo"}, {"word": "el manojo", "category": "La granja y el trabajo agrícola", "level": 2, "translation": "bunch", "type": "Sustantivo"}, {"word": "el pétalo", "category": "La granja y el trabajo agrícola", "level": 2, "translation": "petal", "type": "Sustantivo"}, {"word": "el grano", "category": "La granja y el trabajo agrícola", "level": 2, "translation": "grain", "type": "Sustantivo"}, {"word": "el invernadero", "category": "La granja y el trabajo agrícola", "level": 2, "translation": "greenhouse", "type": "Sustantivo"}, {"word": "el girasol", "category": "La granja y el trabajo agrícola", "level": 2, "translation": "sunflower", "type": "Sustantivo"}, {"word": "la cosecha", "category": "La granja y el trabajo agrícola", "level": 2, "translation": "harvest", "type": "Sustantivo"}, {"word": "la dalia", "category": "La granja y el trabajo agrícola", "level": 3, "translation": "dahlia", "type": "Sustantivo"}, {"word": "la zinnia", "category": "La granja y el trabajo agrícola", "level": 3, "translation": "zinnia", "type": "Sustantivo"}, {"word": "la albahaca", "category": "La granja y el trabajo agrícola", "level": 3, "translation": "basil", "type": "Sustantivo"}, {"word": "el dormitorio", "category": "La casa", "level": 1, "translation": "bedroom", "type": "Sustantivo"}, {"word": "el baño", "category": "La casa", "level": 1, "translation": "bathroom", "type": "Sustantivo"}, {"word": "la cocina", "category": "La casa", "level": 1, "translation": "kitchen", "type": "Sustantivo"}, {"word": "el jardín", "category": "La casa", "level": 1, "translation": "garden", "type": "Sustantivo"}, {"word": "la oficina", "category": "La casa", "level": 1, "translation": "office", "type": "Sustantivo"}, {"word": "la habitación", "category": "La casa", "level": 1, "translation": "room", "type": "Sustantivo"}, {"word": "el balcón", "category": "La casa", "level": 2, "translation": "balcony", "type": "Sustantivo"}, {"word": "el comedor", "category": "La casa", "level": 2, "translation": "dining room", "type": "Sustantivo"}, {"word": "el salón/la sala", "category": "La casa", "level": 2, "translation": "living room", "type": "Sustantivo"}, {"word": "el pasillo", "category": "La casa", "level": 2, "translation": "hallway", "type": "Sustantivo"}, {"word": "el sitio", "category": "La casa", "level": 2, "translation": "place", "type": "Sustantivo"}, {"word": "la videollamada", "category": "La casa", "level": 2, "translation": "video call", "type": "Sustantivo"}, {"word": "el vaso", "category": "Objetos y vida diaria", "level": 1, "translation": "glass", "type": "Sustantivo"}, {"word": "la llave", "category": "Objetos y vida diaria", "level": 1, "translation": "key", "type": "Sustantivo"}, {"word": "la llamada", "category": "Objetos y vida diaria", "level": 1, "translation": "call", "type": "Sustantivo"}, {"word": "el error", "category": "Objetos y vida diaria", "level": 1, "translation": "mistake", "type": "Sustantivo"}, {"word": "el problema", "category": "Objetos y vida diaria", "level": 1, "translation": "problem", "type": "Sustantivo"}, {"word": "la noticia", "category": "Objetos y vida diaria", "level": 1, "translation": "news", "type": "Sustantivo"}, {"word": "el paraguas", "category": "Objetos y vida diaria", "level": 2, "translation": "umbrella", "type": "Sustantivo"}, {"word": "el tanque de gas", "category": "Objetos y vida diaria", "level": 2, "translation": "gas tank", "type": "Sustantivo"}, {"word": "la almohada", "category": "Objetos y vida diaria", "level": 2, "translation": "pillow", "type": "Sustantivo"}, {"word": "la equivocación", "category": "Objetos y vida diaria", "level": 2, "translation": "mistake", "type": "Sustantivo"}, {"word": "la pastilla", "category": "Objetos y vida diaria", "level": 2, "translation": "pill", "type": "Sustantivo"}, {"word": "el corazón", "category": "Objetos y vida diaria", "level": 2, "translation": "heart", "type": "Sustantivo"}, {"word": "la entrada", "category": "Objetos y vida diaria", "level": 2, "translation": "entrance", "type": "Sustantivo"}, {"word": "el piano", "category": "Objetos y vida diaria", "level": 2, "translation": "piano", "type": "Sustantivo"}, {"word": "el plano", "category": "Objetos y vida diaria", "level": 2, "translation": "map/plan", "type": "Sustantivo"}, {"word": "el baile", "category": "Objetos y vida diaria", "level": 2, "translation": "dance", "type": "Sustantivo"}, {"word": "la gota", "category": "Objetos y vida diaria", "level": 2, "translation": "drop", "type": "Sustantivo"}, {"word": "el poeta", "category": "Objetos y vida diaria", "level": 3, "translation": "poet", "type": "Sustantivo"}, {"word": "la causa", "category": "Objetos y vida diaria", "level": 3, "translation": "cause", "type": "Sustantivo"}, {"word": "el viaje", "category": "Estudios y vida", "level": 1, "translation": "trip", "type": "Sustantivo"}, {"word": "la canción", "category": "Estudios y vida", "level": 1, "translation": "song", "type": "Sustantivo"}, {"word": "la montaña", "category": "Estudios y vida", "level": 1, "translation": "mountain", "type": "Sustantivo"}, {"word": "la medicina", "category": "Estudios y vida", "level": 1, "translation": "medicine", "type": "Sustantivo"}, {"word": "el aeropuerto", "category": "Estudios y vida", "level": 1, "translation": "airport", "type": "Sustantivo"}, {"word": "la inundación", "category": "Estudios y vida", "level": 2, "translation": "flood", "type": "Sustantivo"}, {"word": "la ausencia", "category": "Estudios y vida", "level": 2, "translation": "absence", "type": "Sustantivo"}, {"word": "el placer", "category": "Estudios y vida", "level": 2, "translation": "pleasure", "type": "Sustantivo"}, {"word": "la concentración", "category": "Estudios y vida", "level": 2, "translation": "concentration", "type": "Sustantivo"}, {"word": "la conversación", "category": "Estudios y vida", "level": 2, "translation": "conversation", "type": "Sustantivo"}, {"word": "la paciencia", "category": "Estudios y vida", "level": 2, "translation": "patience", "type": "Sustantivo"}, {"word": "el ramo", "category": "Estudios y vida", "level": 2, "translation": "bouquet", "type": "Sustantivo"}, {"word": "la comunidad", "category": "Estudios y vida", "level": 2, "translation": "community", "type": "Sustantivo"}, {"word": "el alquiler/la renta", "category": "Estudios y vida", "level": 2, "translation": "rent", "type": "Sustantivo"}, {"word": "el templo", "category": "Estudios y vida", "level": 2, "translation": "temple", "type": "Sustantivo"}, {"word": "el centro histórico", "category": "Estudios y vida", "level": 2, "translation": "historic center", "type": "Sustantivo"}, {"word": "la asistencia", "category": "Estudios y vida", "level": 3, "translation": "attendance", "type": "Sustantivo"}, {"word": "el trauma", "category": "Estudios y vida", "level": 3, "translation": "trauma", "type": "Sustantivo"}, {"word": "la compasión", "category": "Estudios y vida", "level": 3, "translation": "compassion", "type": "Sustantivo"}, {"word": "la depresión", "category": "Estudios y vida", "level": 3, "translation": "depression", "type": "Sustantivo"}, {"word": "las hierbas", "category": "Estudios y vida", "level": 3, "translation": "herbs", "type": "Sustantivo"}, {"word": "las corrientes", "category": "Estudios y vida", "level": 3, "translation": "streams", "type": "Sustantivo"}, {"word": "el amigo/la amiga", "category": "Objetos y vida diaria", "level": 1, "translation": "friend", "type": "Sustantivo"}, {"word": "el libro", "category": "Objetos y vida diaria", "level": 1, "translation": "book", "type": "Sustantivo"}, {"word": "la persona", "category": "Objetos y vida diaria", "level": 1, "translation": "person", "type": "Sustantivo"}, {"word": "el parque", "category": "Objetos y vida diaria", "level": 1, "translation": "park", "type": "Sustantivo"}, {"word": "el hombre", "category": "Objetos y vida diaria", "level": 1, "translation": "man", "type": "Sustantivo"}, {"word": "el gato", "category": "Objetos y vida diaria", "level": 1, "translation": "cat", "type": "Sustantivo"}, {"word": "la ciudad", "category": "Objetos y vida diaria", "level": 1, "translation": "city", "type": "Sustantivo"}, {"word": "el país", "category": "Objetos y vida diaria", "level": 1, "translation": "country", "type": "Sustantivo"}, {"word": "el mercado", "category": "Objetos y vida diaria", "level": 1, "translation": "market", "type": "Sustantivo"}, {"word": "la verdad", "category": "Estudios y vida", "level": 2, "translation": "truth", "type": "Sustantivo"}, {"word": "la bicicleta", "category": "Estudios y vida", "level": 2, "translation": "bicycle", "type": "Sustantivo"}, {"word": "la gente", "category": "Estudios y vida", "level": 2, "translation": "people", "type": "Sustantivo"}, {"word": "la señorita", "category": "Estudios y vida", "level": 2, "translation": "young lady/miss", "type": "Sustantivo"}, {"word": "las hojas", "category": "Estudios y vida", "level": 2, "translation": "leaves", "type": "Sustantivo"}, {"word": "el río", "category": "Estudios y vida", "level": 2, "translation": "river", "type": "Sustantivo"}, {"word": "la naturaleza", "category": "Estudios y vida", "level": 2, "translation": "nature", "type": "Sustantivo"}, {"word": "el diccionario", "category": "Estudios y vida", "level": 2, "translation": "dictionary", "type": "Sustantivo"}, {"word": "la imagen", "category": "Estudios y vida", "level": 2, "translation": "image", "type": "Sustantivo"}, {"word": "la pregunta", "category": "Estudios y vida", "level": 2, "translation": "question", "type": "Sustantivo"}, {"word": "el animal", "category": "Estudios y vida", "level": 2, "translation": "animal", "type": "Sustantivo"}, {"word": "el médico/la médica", "category": "Estudios y vida", "level": 2, "translation": "doctor", "type": "Sustantivo"}, {"word": "la rosa", "category": "Estudios y vida", "level": 2, "translation": "rose", "type": "Sustantivo"}, {"word": "el editor/la editora", "category": "Estudios y vida", "level": 3, "translation": "editor", "type": "Sustantivo"}, {"word": "el traductor/la traductora", "category": "Estudios y vida", "level": 3, "translation": "translator", "type": "Sustantivo"}, {"word": "la inteligencia artificial", "category": "Estudios y vida", "level": 3, "translation": "artificial intelligence", "type": "Sustantivo"}];
+
+const TYPES = ["Sustantivo", "Verbo", "Adjetivo", "Expresión"];
+const CATEGORIES = [...new Set(VOCAB.filter(w => w.type === "Sustantivo").map(w => w.category))].sort();
+const DURATIONS = [60, 120, 300];
+
+const CATEGORY_EN = {"La granja y el trabajo agrícola": "The farm and farm work", "La casa": "The house", "Objetos y vida diaria": "Objects and daily life", "Estudios y vida": "Studies and life"};
+
+const UI = {
+  es: {
+    appTitle: "Describe y adivina",
+    modeGame: "Juego",
+    modeReview: "Repaso",
+    wordsCount: n => `${n} palabra${n === 1 ? "" : "s"}`,
+    howToUse: "Cómo usar la app",
+    helpGame: "Juego",
+    helpReview: "Repaso",
+    helpP2rest: " aparece una palabra y una persona la explica en español sin decirla. La otra persona intenta adivinarla. La adivinó pasa a una palabra nueva y Pasar salta a la siguiente. Se puede jugar con un límite de tiempo o sin tiempo.",
+    helpP3rest: " aparece una palabra al azar. Al tocar la tarjeta se ve la traducción, y el ícono i muestra la categoría y el nivel.",
+    helpP4: "En los dos modos puedes filtrar las palabras por nivel, tipo de palabra y categoría.",
+    vocabulary: "Vocabulario",
+    levelBasic: "básico",
+    levelIntermediate: "intermedio",
+    levelAdvanced: "avanzado",
+    chooseLevel: "Elige al menos un nivel.",
+    wordType: "Tipo de palabra",
+    all: "todas",
+    none: "ninguna",
+    chooseType: "Elige al menos un tipo de palabra.",
+    nounCategories: "Categorías de sustantivos",
+    chooseCategory: 'Elige al menos una categoría (o desactiva "Sustantivo" en tipo de palabra).',
+    tapToTranslate: "toca la tarjeta para traducir",
+    showCategory: "Mostrar categoría",
+    selectAtLeastOne: "Selecciona al menos una categoría",
+    nextWord: "Siguiente palabra",
+    duration: "Duración",
+    noTimeLimit: "Sin tiempo",
+    min: n => `${n} min`,
+    startGame: "Empezar partida",
+    selectAtLeastOneFilter: "Selecciona al menos una categoría o tipo de palabra.",
+    guessed: "Adivinadas",
+    passed: "Pasadas",
+    end: "terminar",
+    yourWord: "Tu palabra",
+    explain: "Explícala sin decir la palabra.",
+    theyGuessedIt: "La adivinó",
+    pass: "Pasar",
+    noWordsFiltered: "No hay palabras con estos filtros.",
+    endEarly: "terminar antes",
+    timeUp: "Tiempo",
+    gameOver: "Partida terminada",
+    guessedLower: "adivinadas",
+    passedLower: "pasadas",
+    playAgain: "Jugar otra vez",
+    typeNoun: "Sustantivo",
+    typeVerb: "Verbo",
+    typeAdjective: "Adjetivo",
+    typeExpression: "Expresión",
+  },
+  en: {
+    appTitle: "Describe and Guess",
+    modeGame: "Game",
+    modeReview: "Review",
+    wordsCount: n => `${n} word${n === 1 ? "" : "s"}`,
+    howToUse: "How to use the app",
+    helpGame: "Game",
+    helpReview: "Review",
+    helpP2rest: " a word appears and one person explains it in Spanish without saying it. The other person tries to guess it. \u201cThey guessed it\u201d moves to a new word and \u201cPass\u201d skips to the next one. You can play with a time limit or without one.",
+    helpP3rest: " a random word appears. Tap the card to see the translation, and the i icon shows the category and level.",
+    helpP4: "In both modes you can filter words by level, word type and category.",
+    vocabulary: "Vocabulary",
+    levelBasic: "basic",
+    levelIntermediate: "intermediate",
+    levelAdvanced: "advanced",
+    chooseLevel: "Choose at least one level.",
+    wordType: "Word type",
+    all: "all",
+    none: "none",
+    chooseType: "Choose at least one word type.",
+    nounCategories: "Noun categories",
+    chooseCategory: 'Choose at least one category (or turn off "Noun" in word type).',
+    tapToTranslate: "tap the card to translate",
+    showCategory: "Show category",
+    selectAtLeastOne: "Select at least one category",
+    nextWord: "Next word",
+    duration: "Duration",
+    noTimeLimit: "No time limit",
+    min: n => `${n} min`,
+    startGame: "Start game",
+    selectAtLeastOneFilter: "Select at least one category or word type.",
+    guessed: "Guessed",
+    passed: "Passed",
+    end: "end",
+    yourWord: "Your word",
+    explain: "Explain it without saying the word.",
+    theyGuessedIt: "They guessed it",
+    pass: "Pass",
+    noWordsFiltered: "No words match these filters.",
+    endEarly: "end early",
+    timeUp: "Time's up",
+    gameOver: "Game over",
+    guessedLower: "guessed",
+    passedLower: "passed",
+    playAgain: "Play again",
+    typeNoun: "Noun",
+    typeVerb: "Verb",
+    typeAdjective: "Adjective",
+    typeExpression: "Expression",
+  },
+};
+
+function categoryLabel(cat, lang) {
+  return lang === "en" ? (CATEGORY_EN[cat] || cat) : cat;
+}
+function typeLabel(type, t) {
+  if (type === "Sustantivo") return t.typeNoun;
+  if (type === "Verbo") return t.typeVerb;
+  if (type === "Adjetivo") return t.typeAdjective;
+  if (type === "Expresión") return t.typeExpression;
+  return type;
+}
+function levelLabelFn(level, t) {
+  if (level === 1) return t.levelBasic;
+  if (level === 2) return t.levelIntermediate;
+  return t.levelAdvanced;
+}
+function pickRandom(pool, exclude) {
+  if (pool.length === 0) return null;
+  if (pool.length === 1) return pool[0];
+  let choice;
+  do { choice = pool[Math.floor(Math.random() * pool.length)]; } while (choice.word === exclude);
+  return choice;
+}
+function formatTime(seconds) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+/* ---------------- state ---------------- */
+let lang = "es";
+let selectedTypes = new Set(["Sustantivo"]);
+let selectedCats = new Set(CATEGORIES);
+let levels = new Set([1, 2, 3]);
+let showFilters = false;
+let showHelp = false;
+let mode = "juego"; // "repaso" | "juego"
+
+// Repaso state
+let repasoCurrent = null;
+let repasoFlipped = false;
+let repasoShowCategory = false;
+
+// Juego state
+let gameStage = "setup"; // setup | playing | finished
+let gameDuration = null;
+let gameTimeLeft = null;
+let gameCurrent = null;
+let gameGuessed = 0;
+let gamePassed = 0;
+let gameIntervalId = null;
+
+function t() { return UI[lang]; }
+
+function getPool() {
+  return VOCAB.filter(w =>
+    levels.has(w.level) &&
+    selectedTypes.has(w.type) &&
+    (w.type !== "Sustantivo" || selectedCats.has(w.category))
+  );
+}
+
+/* ---------------- render: header ---------------- */
+function renderHeader() {
+  document.getElementById('appTitle').textContent = t().appTitle;
+  document.getElementById('poolCount').textContent = t().wordsCount(getPool().length);
+  document.getElementById('modeGameBtn').textContent = t().modeGame;
+  document.getElementById('modeReviewBtn').textContent = t().modeReview;
+  document.getElementById('modeGameBtn').classList.toggle('active', mode === 'juego');
+  document.getElementById('modeReviewBtn').classList.toggle('active', mode === 'repaso');
+
+  document.getElementById('langEn').classList.toggle('active', lang === 'en');
+  document.getElementById('langEs').classList.toggle('active', lang === 'es');
+  const checked = lang === 'es';
+  document.getElementById('switchTrack').classList.toggle('checked', checked);
+  document.getElementById('switchKnob').classList.toggle('checked', checked);
+}
+
+document.getElementById('modeGameBtn').onclick = () => { mode = 'juego'; renderAll(); };
+document.getElementById('modeReviewBtn').onclick = () => { mode = 'repaso'; renderAll(); };
+document.getElementById('langEn').onclick = () => { lang = 'en'; renderAll(); };
+document.getElementById('langEs').onclick = () => { lang = 'es'; renderAll(); };
+document.getElementById('langSwitchBtn').onclick = () => { lang = (lang === 'es' ? 'en' : 'es'); renderAll(); };
+
+/* ---------------- render: help ---------------- */
+function renderHelp() {
+  document.getElementById('helpToggleLabel').textContent = t().howToUse;
+  document.getElementById('helpChevron').classList.toggle('open', showHelp);
+  document.getElementById('helpPanel').classList.toggle('open', showHelp);
+  document.getElementById('helpGameLabel').textContent = t().helpGame + ':';
+  document.getElementById('helpReviewLabel').textContent = t().helpReview + ':';
+  document.getElementById('helpP2rest').textContent = t().helpP2rest;
+  document.getElementById('helpP3rest').textContent = t().helpP3rest;
+  document.getElementById('helpP4').textContent = t().helpP4;
+}
+document.getElementById('helpToggle').onclick = () => { showHelp = !showHelp; renderHelp(); };
+
+/* ---------------- render: vocabulary levels ---------------- */
+function renderLevels() {
+  document.getElementById('vocabLabel').textContent = t().vocabulary;
+  const row = document.getElementById('levelRow');
+  row.innerHTML = '';
+  [[1, t().levelBasic], [2, t().levelIntermediate], [3, t().levelAdvanced]].forEach(([lvl, label]) => {
+    const btn = document.createElement('button');
+    btn.className = 'level-btn' + (levels.has(lvl) ? ' active' : '');
+    btn.textContent = label;
+    btn.onclick = () => {
+      if (levels.has(lvl)) levels.delete(lvl); else levels.add(lvl);
+      renderAll();
+    };
+    row.appendChild(btn);
+  });
+  const warn = document.getElementById('levelWarn');
+  warn.textContent = t().chooseLevel;
+  warn.style.display = levels.size === 0 ? 'block' : 'none';
+}
+
+/* ---------------- render: type filter ---------------- */
+function renderTypes() {
+  document.getElementById('typeLabel').textContent = t().wordType;
+  const allSel = selectedTypes.size === TYPES.length;
+  document.getElementById('toggleAllTypes').textContent = allSel ? t().none : t().all;
+  document.getElementById('toggleAllTypes').onclick = () => {
+    selectedTypes = allSel ? new Set() : new Set(TYPES);
+    renderAll();
+  };
+  const row = document.getElementById('typeRow');
+  row.innerHTML = '';
+  TYPES.forEach(ty => {
+    const btn = document.createElement('button');
+    btn.className = 'type-btn' + (selectedTypes.has(ty) ? ' active' : '');
+    btn.textContent = typeLabel(ty, t());
+    btn.onclick = () => {
+      if (selectedTypes.has(ty)) selectedTypes.delete(ty); else selectedTypes.add(ty);
+      renderAll();
+    };
+    row.appendChild(btn);
+  });
+  const warn = document.getElementById('typeWarn');
+  warn.textContent = t().chooseType;
+  warn.style.display = selectedTypes.size === 0 ? 'block' : 'none';
+}
+
+/* ---------------- render: categories dropdown ---------------- */
+function renderCategories() {
+  document.getElementById('filtersToggleLabel').textContent = t().nounCategories;
+  document.getElementById('catSectionLabel').textContent = t().nounCategories;
+  document.getElementById('filtersChevron').classList.toggle('open', showFilters);
+  document.getElementById('filtersPanel').classList.toggle('open', showFilters);
+
+  const allSel = selectedCats.size === CATEGORIES.length;
+  document.getElementById('toggleAllCats').textContent = allSel ? t().none : t().all;
+  document.getElementById('toggleAllCats').onclick = () => {
+    selectedCats = allSel ? new Set() : new Set(CATEGORIES);
+    renderAll();
+  };
+
+  const list = document.getElementById('catList');
+  list.innerHTML = '';
+  CATEGORIES.forEach(cat => {
+    const active = selectedCats.has(cat);
+    const item = document.createElement('label');
+    item.className = 'cat-item' + (active ? ' active' : '');
+    item.innerHTML = '<span class="box"><span class="check">&#10003;</span></span><span class="cat-label">' + categoryLabel(cat, lang) + '</span>';
+    item.onclick = () => {
+      if (selectedCats.has(cat)) selectedCats.delete(cat); else selectedCats.add(cat);
+      renderAll();
+    };
+    list.appendChild(item);
+  });
+
+  const warn = document.getElementById('catWarn');
+  warn.textContent = t().chooseCategory;
+  warn.style.display = selectedCats.size === 0 ? 'block' : 'none';
+}
+document.getElementById('filtersToggle').onclick = () => { showFilters = !showFilters; renderCategories(); };
+
+/* ---------------- Repaso ---------------- */
+function renderRepaso() {
+  const pool = getPool();
+  if (!repasoCurrent || !pool.some(w => w.word === repasoCurrent.word)) {
+    repasoCurrent = pickRandom(pool, null);
+    repasoFlipped = false;
+    repasoShowCategory = false;
+  }
+
+  const area = document.getElementById('modeArea');
+  const cur = repasoCurrent;
+
+  if (!cur) {
+    area.innerHTML = '<div class="empty-state">' + t().selectAtLeastOne + '</div>' +
+      '<button class="primary-btn" disabled>' + t().nextWord + '</button>';
+    return;
+  }
+
+  const subHtml = repasoShowCategory
+    ? '<span class="cat-text">' + (cur.type === 'Sustantivo' ? categoryLabel(cur.category, lang) : typeLabel(cur.type, t())) + '</span>'
+    : '<span class="hint">' + t().tapToTranslate + '</span>';
+
+  area.innerHTML = `
+    <div class="card-outer" id="cardOuter">
+      <div class="card-inner${repasoFlipped ? ' flipped' : ''}" id="cardInner">
+        <div class="card-face">
+          <div class="word-row">
+            <span class="word">${cur.word}</span>
+            <button class="info-btn${repasoShowCategory ? ' active' : ''}" id="infoBtn" aria-label="${t().showCategory}">i</button>
+          </div>
+          <div class="card-sub">${subHtml}</div>
+        </div>
+        <div class="card-face card-back">
+          <span class="translation">${cur.translation}</span>
+        </div>
+      </div>
+    </div>
+    <button class="primary-btn" id="nextWordBtn">${t().nextWord}</button>
+  `;
+
+  document.getElementById('cardOuter').onclick = () => {
+    repasoFlipped = !repasoFlipped;
+    renderRepaso();
+  };
+  document.getElementById('infoBtn').onclick = (e) => {
+    e.stopPropagation();
+    repasoShowCategory = !repasoShowCategory;
+    renderRepaso();
+  };
+  document.getElementById('nextWordBtn').onclick = () => {
+    repasoFlipped = false;
+    repasoShowCategory = false;
+    repasoCurrent = pickRandom(pool, repasoCurrent ? repasoCurrent.word : null);
+    renderRepaso();
+  };
+}
+
+/* ---------------- Juego ---------------- */
+function clearGameTimer() {
+  if (gameIntervalId) { clearInterval(gameIntervalId); gameIntervalId = null; }
+}
+
+function startGame() {
+  const pool = getPool();
+  gameGuessed = 0;
+  gamePassed = 0;
+  gameCurrent = pickRandom(pool, null);
+  if (gameDuration) {
+    gameTimeLeft = gameDuration;
+    gameIntervalId = setInterval(() => {
+      gameTimeLeft = gameTimeLeft > 0 ? gameTimeLeft - 1 : 0;
+      if (gameTimeLeft === 0) {
+        clearGameTimer();
+        gameStage = 'finished';
+      }
+      renderJuego();
+    }, 1000);
+  } else {
+    gameTimeLeft = null;
+  }
+  gameStage = 'playing';
+  renderJuego();
+}
+
+function endGame() {
+  clearGameTimer();
+  gameStage = 'finished';
+  renderJuego();
+}
+
+function gameNextWord() {
+  const pool = getPool();
+  gameCurrent = pickRandom(pool, gameCurrent ? gameCurrent.word : null);
+}
+
+function renderJuego() {
+  const area = document.getElementById('modeArea');
+  const pool = getPool();
+
+  if (gameStage === 'setup') {
+    area.innerHTML = `
+      <div style="margin-top:32px;margin-bottom:8px;">
+        <div class="duration-label">${t().duration}</div>
+        <div class="duration-row" id="durationRow"></div>
+        <button class="primary-btn" id="startGameBtn" ${pool.length === 0 ? 'disabled' : ''}>${t().startGame}</button>
+        <p class="warn" id="setupWarn" style="display:${pool.length === 0 ? 'block' : 'none'};">${t().selectAtLeastOneFilter}</p>
+      </div>
+    `;
+    const row = document.getElementById('durationRow');
+    [null, ...DURATIONS].forEach(d => {
+      const btn = document.createElement('button');
+      btn.className = 'duration-btn' + (gameDuration === d ? ' active' : '');
+      btn.textContent = d === null ? t().noTimeLimit : t().min(d / 60);
+      btn.onclick = () => { gameDuration = d; renderJuego(); };
+      row.appendChild(btn);
+    });
+    document.getElementById('startGameBtn').onclick = startGame;
+    return;
+  }
+
+  if (gameStage === 'finished') {
+    area.innerHTML = `
+      <div class="finished-block">
+        <div class="finished-label">${gameDuration ? t().timeUp : t().gameOver}</div>
+        <div class="finished-stats">
+          <div>
+            <div class="finished-stat-num">${gameGuessed}</div>
+            <div class="finished-stat-label">${t().guessedLower}</div>
+          </div>
+          <div>
+            <div class="finished-stat-num">${gamePassed}</div>
+            <div class="finished-stat-label">${t().passedLower}</div>
+          </div>
+        </div>
+        <button class="primary-btn" id="playAgainBtn">${t().playAgain}</button>
+      </div>
+    `;
+    document.getElementById('playAgainBtn').onclick = () => { gameStage = 'setup'; renderJuego(); };
+    return;
+  }
+
+  // playing
+  const wordBlock = gameCurrent ? `
+    <div class="game-word-block">
+      <div class="game-word-label">${t().yourWord}</div>
+      <div class="game-word">${gameCurrent.word}</div>
+      <div class="game-word-meta">
+        <span class="cat-text">${gameCurrent.type === 'Sustantivo' ? categoryLabel(gameCurrent.category, lang) : typeLabel(gameCurrent.type, t())}</span>
+        &nbsp;&middot;&nbsp;${levelLabelFn(gameCurrent.level, t())}
+      </div>
+      <div class="game-explain">${t().explain}</div>
+    </div>
+  ` : `<div class="game-word-block" style="font-size:14px;color:#9B9B9B;">${t().noWordsFiltered}</div>`;
+
+  area.innerHTML = `
+    <div style="margin-top:24px;margin-bottom:8px;">
+      <div class="game-topbar">
+        <span>${t().guessed}: <strong>${gameGuessed}</strong>&nbsp;&nbsp;&middot;&nbsp;&nbsp;${t().passed}: <strong>${gamePassed}</strong></span>
+        ${gameDuration
+          ? `<span class="timer">${formatTime(gameTimeLeft)}</span>`
+          : `<button class="link-btn" id="endGameBtn">${t().end}</button>`}
+      </div>
+      ${wordBlock}
+      <div class="game-actions">
+        <button class="btn-guessed" id="guessedBtn" ${!gameCurrent ? 'disabled' : ''}>${t().theyGuessedIt}</button>
+        <button class="btn-pass" id="passBtn" ${!gameCurrent ? 'disabled' : ''}>${t().pass}</button>
+      </div>
+      ${gameDuration ? `<button class="end-early" id="endEarlyBtn">${t().endEarly}</button>` : ''}
+    </div>
+  `;
+
+  if (!gameDuration) {
+    document.getElementById('endGameBtn').onclick = endGame;
+  } else {
+    document.getElementById('endEarlyBtn').onclick = endGame;
+  }
+  document.getElementById('guessedBtn').onclick = () => { gameGuessed++; gameNextWord(); renderJuego(); };
+  document.getElementById('passBtn').onclick = () => { gamePassed++; gameNextWord(); renderJuego(); };
+}
+
+/* ---------------- master render ---------------- */
+function renderAll() {
+  renderHeader();
+  renderHelp();
+  if (mode === 'repaso') {
+    renderRepaso();
+  } else {
+    renderJuego();
+  }
+  renderLevels();
+  renderTypes();
+  renderCategories();
+}
+
+renderAll();
+</script>
+</body>
+</html>
