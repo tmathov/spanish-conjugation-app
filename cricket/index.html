@@ -90,6 +90,14 @@
   }
   .primary-btn:disabled { background: #F5F5F5; color: #B5B5B5; border-color: #EDEDED; cursor: default; }
 
+  .nav-row { display: flex; gap: 8px; }
+  .nav-row .primary-btn { flex: 1; width: auto; }
+  .back-btn {
+    width: 46px; flex-shrink: 0; padding: 13px 0; font-size: 16px; font-family: inherit;
+    border: 1px solid #E5E5E5; border-radius: 6px; background: #FFFFFF; color: #1A1A1A; cursor: pointer;
+  }
+  .back-btn:disabled { color: #D5D5D5; cursor: default; }
+
   /* Juego */
   .duration-label { font-size: 12px; color: #9B9B9B; margin-bottom: 10px; }
   .duration-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
@@ -174,8 +182,8 @@
       </div>
     </div>
     <div class="mode-row">
-      <button class="mode-btn" id="modeGameBtn"></button>
       <button class="mode-btn" id="modeReviewBtn"></button>
+      <button class="mode-btn" id="modeGameBtn"></button>
     </div>
   </div>
 
@@ -270,6 +278,7 @@ const UI = {
     showCategory: "Mostrar categoría",
     selectAtLeastOne: "Selecciona al menos una categoría",
     nextWord: "Siguiente palabra",
+    previousWord: "Palabra anterior",
     duration: "Duración",
     noTimeLimit: "Sin tiempo",
     min: n => `${n} min`,
@@ -320,6 +329,7 @@ const UI = {
     showCategory: "Show category",
     selectAtLeastOne: "Select at least one category",
     nextWord: "Next word",
+    previousWord: "Previous word",
     duration: "Duration",
     noTimeLimit: "No time limit",
     min: n => `${n} min`,
@@ -381,10 +391,11 @@ let selectedCats = new Set(CATEGORIES);
 let levels = new Set([1, 2, 3]);
 let showFilters = false;
 let showHelp = false;
-let mode = "juego"; // "repaso" | "juego"
+let mode = "repaso"; // "repaso" | "juego"
 
 // Repaso state
-let repasoCurrent = null;
+let repasoHistory = [];
+let repasoPointer = 0;
 let repasoFlipped = false;
 let repasoShowCategory = false;
 
@@ -525,14 +536,18 @@ document.getElementById('filtersToggle').onclick = () => { showFilters = !showFi
 /* ---------------- Repaso ---------------- */
 function renderRepaso() {
   const pool = getPool();
-  if (!repasoCurrent || !pool.some(w => w.word === repasoCurrent.word)) {
-    repasoCurrent = pickRandom(pool, null);
+  const curCheck = repasoHistory[repasoPointer];
+  if (repasoHistory.length === 0 || !curCheck || !pool.some(w => w.word === curCheck.word)) {
+    const w = pickRandom(pool, null);
+    repasoHistory = w ? [w] : [];
+    repasoPointer = 0;
     repasoFlipped = false;
     repasoShowCategory = false;
   }
 
   const area = document.getElementById('modeArea');
-  const cur = repasoCurrent;
+  const cur = repasoHistory[repasoPointer] || null;
+  const canGoBack = repasoPointer > 0;
 
   if (!cur) {
     area.innerHTML = '<div class="empty-state">' + t().selectAtLeastOne + '</div>' +
@@ -559,7 +574,10 @@ function renderRepaso() {
         </div>
       </div>
     </div>
-    <button class="primary-btn" id="nextWordBtn">${t().nextWord}</button>
+    <div class="nav-row">
+      <button class="back-btn" id="prevWordBtn" ${canGoBack ? '' : 'disabled'} aria-label="${t().previousWord}">&#8249;</button>
+      <button class="primary-btn" id="nextWordBtn">${t().nextWord}</button>
+    </div>
   `;
 
   document.getElementById('cardOuter').onclick = () => {
@@ -571,10 +589,25 @@ function renderRepaso() {
     repasoShowCategory = !repasoShowCategory;
     renderRepaso();
   };
+  document.getElementById('prevWordBtn').onclick = () => {
+    if (repasoPointer <= 0) return;
+    repasoFlipped = false;
+    repasoShowCategory = false;
+    repasoPointer -= 1;
+    renderRepaso();
+  };
   document.getElementById('nextWordBtn').onclick = () => {
     repasoFlipped = false;
     repasoShowCategory = false;
-    repasoCurrent = pickRandom(pool, repasoCurrent ? repasoCurrent.word : null);
+    if (repasoPointer < repasoHistory.length - 1) {
+      repasoPointer += 1;
+    } else {
+      const w = pickRandom(pool, cur ? cur.word : null);
+      if (w) {
+        repasoHistory.push(w);
+        repasoPointer += 1;
+      }
+    }
     renderRepaso();
   };
 }
